@@ -1,0 +1,29 @@
+server:
+  port: "8080"
+  host: "0.0.0.0"
+  mode: "debug"
+  jwt_key: "your-secret-key-change-this-in-production"
+
+database:
+  driver: "mysql"
+  host: "localhost"
+  port: "3306"
+  username: "socks5_user"
+  password: "socks5_password"
+  database: "socks5_db"
+
+proxy:
+  port: "1080"
+  host: "0.0.0.0"
+  timeout: 30
+  max_connections: 1000
+
+auth:
+  session_timeout: 3600
+  max_login_attempts: 5
+
+log:
+  level: "info"
+  file: "logs/app.log"
+  format: "json"
+
