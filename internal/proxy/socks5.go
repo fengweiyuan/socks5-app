@@ -1,8 +1,6 @@
 package proxy
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"

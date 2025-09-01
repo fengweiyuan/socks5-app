@@ -2,7 +2,7 @@ package api
 
 import (
 	"net/http"
-	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"socks5-app/internal/auth"
@@ -52,7 +52,7 @@ func (s *Server) handleLogin(c *gin.Context) {
 		Method:    "POST",
 		Status:    "success",
 		UserAgent: c.GetHeader("User-Agent"),
-		Timestamp: user.CreatedAt,
+		Timestamp: time.Now(),
 	}
 	database.DB.Create(accessLog)
 
@@ -77,7 +77,7 @@ func (s *Server) handleLogout(c *gin.Context) {
 		Method:    "POST",
 		Status:    "success",
 		UserAgent: c.GetHeader("User-Agent"),
-		Timestamp: userID.(uint),
+		Timestamp: time.Now(),
 	}
 	database.DB.Create(accessLog)
 

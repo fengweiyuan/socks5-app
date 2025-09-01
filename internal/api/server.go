@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"socks5-app/internal/config"

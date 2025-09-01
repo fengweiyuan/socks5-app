@@ -42,10 +42,10 @@ func Init() error {
 		return err
 	}
 
-	// 自动迁移数据库表
-	if err := autoMigrate(); err != nil {
-		return err
-	}
+	// 自动迁移数据库表（暂时禁用，因为表已存在）
+	// if err := autoMigrate(); err != nil {
+	// 	return err
+	// }
 
 	// 初始化默认数据
 	if err := initDefaultData(); err != nil {

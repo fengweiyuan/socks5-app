@@ -6,7 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"socks5-app/internal/database"
 	"socks5-app/internal/logger"
-	"socks5-app/internal/proxy"
 )
 
 func (s *Server) handleGetOnlineUsers(c *gin.Context) {

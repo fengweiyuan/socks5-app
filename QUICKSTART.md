@@ -23,7 +23,7 @@ docker-compose up -d
 
 3. **访问管理界面**
 ```
-http://localhost:8080
+http://localhost:8012
 ```
 
 ### 方法二：手动部署
@@ -63,7 +63,7 @@ make start
 
 ## 默认配置
 
-- **Web管理界面**: http://localhost:8080
+- **Web管理界面**: http://localhost:8012
 - **SOCKS5代理端口**: 1080
 - **MySQL端口**: 3306
 - **默认管理员账户**: admin / password
@@ -116,7 +116,7 @@ proxy:
 ### Web管理界面配置
 ```yaml
 server:
-  port: "8080"           # Web服务端口
+  port: "8012"           # Web服务端口
   host: "0.0.0.0"        # 监听地址
   mode: "debug"          # 运行模式
   jwt_key: "your-secret-key"  # JWT密钥

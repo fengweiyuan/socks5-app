@@ -72,7 +72,7 @@ docker-compose up -d
 
 3. **访问管理界面**
 ```
-http://localhost:8080
+http://localhost:8012
 默认账户: admin / password
 ```
 
@@ -99,7 +99,7 @@ cd web && npm install
 ```
 
 3. **配置数据库连接**
-编辑 `configs/config.yaml` 文件：
+编辑 `configs/config.yaml` 文件：l
 ```yaml
 database:
   driver: "mysql"
@@ -127,7 +127,7 @@ make start
 - 日志级别: INFO
 
 ### Web管理界面
-- 端口: 8080
+- 端口: 8012
 - 认证: JWT Token
 - 数据库: MySQL
 

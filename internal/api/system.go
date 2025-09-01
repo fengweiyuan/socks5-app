@@ -7,7 +7,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"socks5-app/internal/database"
-	"socks5-app/internal/logger"
 )
 
 type SystemStatus struct {

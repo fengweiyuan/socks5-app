@@ -9,9 +9,9 @@ import (
 // User 用户模型
 type User struct {
 	ID        uint           `gorm:"primarykey" json:"id"`
-	Username  string         `gorm:"uniqueIndex;not null" json:"username"`
-	Password  string         `gorm:"not null" json:"-"`
-	Email     string         `json:"email"`
+	Username  string         `gorm:"uniqueIndex;not null;size:50" json:"username"`
+	Password  string         `gorm:"not null;size:255" json:"-"`
+	Email     string         `gorm:"size:100" json:"email"`
 	Role      string         `gorm:"default:'user'" json:"role"`
 	Status    string         `gorm:"default:'active'" json:"status"`
 	BandwidthLimit int64     `gorm:"default:0" json:"bandwidth_limit"` // 0表示无限制

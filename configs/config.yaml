@@ -1,12 +1,12 @@
 server:
-  port: "8080"
+  port: "8012"
   host: "0.0.0.0"
   mode: "debug"
   jwt_key: "your-secret-key-change-this-in-production"
 
 database:
   driver: "mysql"
-  host: "localhost"
+  host: "127.0.0.1"
   port: "3306"
   username: "socks5_user"
   password: "socks5_password"
