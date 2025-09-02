@@ -67,7 +67,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup lang="js">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
@@ -84,8 +84,8 @@ const trafficStats = ref({
 })
 
 const trafficChartRef = ref()
-let trafficChart: echarts.ECharts | null = null
-let intervalId: number | null = null
+let trafficChart = null
+let intervalId = null
 
 const fetchTrafficStats = async () => {
   try {
@@ -191,7 +191,7 @@ const exportLogs = async () => {
   }
 }
 
-const formatBytes = (bytes: number) => {
+const formatBytes = (bytes) => {
   if (bytes === 0) return '0 B'
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
@@ -199,7 +199,7 @@ const formatBytes = (bytes: number) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
-const formatDate = (date: string) => {
+const formatDate = (date) => {
   return new Date(date).toLocaleString()
 }
 

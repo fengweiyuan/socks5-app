@@ -88,19 +88,18 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup lang="js">
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
-import type { FormInstance, FormRules } from 'element-plus'
 
 const authStore = useAuthStore()
 const loading = ref(false)
 const users = ref([])
 const showCreateDialog = ref(false)
 const editingUser = ref(null)
-const userFormRef = ref<FormInstance>()
+const userFormRef = ref()
 
 const userForm = ref({
   username: '',
@@ -110,7 +109,7 @@ const userForm = ref({
   status: 'active'
 })
 
-const rules: FormRules = {
+const rules = {
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' }
   ],
@@ -148,7 +147,7 @@ const fetchUsers = async () => {
   }
 }
 
-const editUser = (user: any) => {
+const editUser = (user) => {
   editingUser.value = user
   userForm.value = { ...user }
   showCreateDialog.value = true
@@ -187,7 +186,7 @@ const saveUser = async () => {
   })
 }
 
-const deleteUser = async (userId: number) => {
+const deleteUser = async (userId) => {
   try {
     await ElMessageBox.confirm('确定要删除这个用户吗？', '提示', {
       confirmButtonText: '确定',
@@ -213,7 +212,7 @@ const deleteUser = async (userId: number) => {
   }
 }
 
-const formatDate = (date: string) => {
+const formatDate = (date) => {
   return new Date(date).toLocaleString()
 }
 

@@ -4,10 +4,11 @@ import (
 	"errors"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
 	"socks5-app/internal/config"
 	"socks5-app/internal/database"
+
+	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Claims struct {
@@ -68,6 +69,11 @@ func ValidateToken(tokenString string) (*Claims, error) {
 
 // AuthenticateUser 用户认证
 func AuthenticateUser(username, password string) (*database.User, error) {
+	// 数据库连接不可用时拒绝认证
+	if database.DB == nil {
+		return nil, errors.New("数据库连接不可用，无法进行用户认证")
+	}
+
 	var user database.User
 	if err := database.DB.Where("username = ? AND status = ?", username, "active").First(&user).Error; err != nil {
 		return nil, errors.New("用户不存在或已被禁用")
@@ -82,10 +88,14 @@ func AuthenticateUser(username, password string) (*database.User, error) {
 
 // GetUserByID 根据ID获取用户
 func GetUserByID(userID uint) (*database.User, error) {
+	// 数据库连接不可用时返回错误
+	if database.DB == nil {
+		return nil, errors.New("数据库连接不可用")
+	}
+
 	var user database.User
 	if err := database.DB.First(&user, userID).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
 }
-

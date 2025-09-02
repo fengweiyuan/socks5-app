@@ -48,7 +48,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup lang="js">
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
@@ -132,18 +132,18 @@ const clearLogs = async () => {
   }
 }
 
-const handleSizeChange = (val: number) => {
+const handleSizeChange = (val) => {
   pageSize.value = val
   currentPage.value = 1
   fetchLogs()
 }
 
-const handleCurrentChange = (val: number) => {
+const handleCurrentChange = (val) => {
   currentPage.value = val
   fetchLogs()
 }
 
-const formatDate = (date: string) => {
+const formatDate = (date) => {
   return new Date(date).toLocaleString()
 }
 

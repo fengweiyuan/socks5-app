@@ -47,23 +47,23 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup lang="js">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const loginFormRef = ref<FormInstance>()
+const loginFormRef = ref()
 
 const loginForm = reactive({
   username: '',
   password: ''
 })
 
-const loginRules: FormRules = {
+const loginRules = {
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' }
   ],

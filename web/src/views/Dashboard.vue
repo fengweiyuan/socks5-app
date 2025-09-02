@@ -130,7 +130,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup lang="js">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -154,24 +154,7 @@ use([
   GridComponent
 ])
 
-interface SystemStats {
-  totalBytesSent: number
-  totalBytesRecv: number
-  activeConnections: number
-  totalUsers: number
-  onlineUsers: number
-}
-
-interface OnlineUser {
-  id: number
-  username: string
-  clientIP: string
-  startTime: string
-  bytesSent: number
-  bytesRecv: number
-}
-
-const stats = ref<SystemStats>({
+const stats = ref({
   totalBytesSent: 0,
   totalBytesRecv: 0,
   activeConnections: 0,
@@ -179,11 +162,11 @@ const stats = ref<SystemStats>({
   onlineUsers: 0
 })
 
-const onlineUsers = ref<OnlineUser[]>([])
+const onlineUsers = ref([])
 const loading = ref(true)
-let interval: number | null = null
+let interval = null
 
-const formatBytes = (bytes: number) => {
+const formatBytes = (bytes) => {
   if (bytes === 0) return '0 B'
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
@@ -191,7 +174,7 @@ const formatBytes = (bytes: number) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
-const formatTime = (time: string) => {
+const formatTime = (time) => {
   return new Date(time).toLocaleString()
 }
 

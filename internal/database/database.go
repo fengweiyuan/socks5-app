@@ -35,20 +35,28 @@ func Init() error {
 			Logger: gormlogger.Default.LogMode(gormlogger.Info),
 		})
 	default:
-		logger.Log.Fatal("不支持的数据库驱动")
+		logger.Log.Error("不支持的数据库驱动")
+		return fmt.Errorf("不支持的数据库驱动: %s", config.GlobalConfig.Database.Driver)
 	}
 
 	if err != nil {
+		logger.Log.Errorf("数据库连接失败: %v", err)
+		DB = nil // 确保DB为nil
 		return err
 	}
 
-	// 自动迁移数据库表（暂时禁用，因为表已存在）
-	// if err := autoMigrate(); err != nil {
-	// 	return err
-	// }
+	logger.Log.Info("数据库连接成功")
+
+	// 自动迁移数据库表
+	if err := autoMigrate(); err != nil {
+		logger.Log.Errorf("数据库表迁移失败: %v", err)
+		// 迁移失败不影响服务启动，只记录错误
+		logger.Log.Warn("数据库表迁移失败，某些功能可能不可用")
+	}
 
 	// 初始化默认数据
 	if err := initDefaultData(); err != nil {
+		logger.Log.Errorf("初始化默认数据失败: %v", err)
 		return err
 	}
 
@@ -64,6 +72,7 @@ func autoMigrate() error {
 		&URLFilter{},
 		&IPWhitelist{},
 		&BandwidthLimit{},
+		&ProxyHeartbeat{},
 	)
 }
 
@@ -83,4 +92,3 @@ func initDefaultData() error {
 	}
 	return nil
 }
-

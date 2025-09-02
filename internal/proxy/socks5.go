@@ -14,6 +14,7 @@ import (
 	"socks5-app/internal/auth"
 	"socks5-app/internal/config"
 	"socks5-app/internal/database"
+	"socks5-app/internal/heartbeat"
 	"socks5-app/internal/logger"
 )
 
@@ -32,26 +33,28 @@ const (
 )
 
 type Socks5Server struct {
-	listener net.Listener
-	config   *config.ProxyConfig
-	clients  map[string]*Client
-	mu       sync.RWMutex
+	listener         net.Listener
+	config           *config.ProxyConfig
+	clients          map[string]*Client
+	mu               sync.RWMutex
+	heartbeatService *heartbeat.HeartbeatService
 }
 
 type Client struct {
-	conn       net.Conn
-	user       *database.User
-	session    *database.ProxySession
-	startTime  time.Time
-	bytesSent  int64
-	bytesRecv  int64
-	mu         sync.Mutex
+	conn      net.Conn
+	user      *database.User
+	session   *database.ProxySession
+	startTime time.Time
+	bytesSent int64
+	bytesRecv int64
+	mu        sync.Mutex
 }
 
 func NewServer() *Socks5Server {
 	return &Socks5Server{
-		config:  &config.GlobalConfig.Proxy,
-		clients: make(map[string]*Client),
+		config:           &config.GlobalConfig.Proxy,
+		clients:          make(map[string]*Client),
+		heartbeatService: heartbeat.NewHeartbeatService(),
 	}
 }
 
@@ -64,6 +67,12 @@ func (s *Socks5Server) Start() error {
 
 	s.listener = listener
 	logger.Log.Infof("SOCKS5服务器启动成功，监听地址: %s", addr)
+
+	// 启动心跳服务
+	s.heartbeatService.Start()
+
+	// 确保在服务停止时关闭心跳服务
+	defer s.heartbeatService.Stop()
 
 	for {
 		conn, err := listener.Accept()
@@ -96,14 +105,18 @@ func (s *Socks5Server) handleConnection(conn net.Conn) {
 		startTime: time.Now(),
 	}
 
-	// 创建数据库会话记录
+	// 创建数据库会话记录（数据库连接失败时不影响正常服务）
 	session := &database.ProxySession{
 		UserID:    user.ID,
 		ClientIP:  clientIP,
 		StartTime: client.startTime,
 		Status:    "active",
 	}
-	database.DB.Create(session)
+	if database.DB != nil {
+		if err := database.DB.Create(session).Error; err != nil {
+			logger.Log.Errorf("创建会话记录失败: %v", err)
+		}
+	}
 	client.session = session
 
 	// 添加到客户端列表
@@ -111,18 +124,28 @@ func (s *Socks5Server) handleConnection(conn net.Conn) {
 	s.clients[clientIP] = client
 	s.mu.Unlock()
 
+	// 增加连接计数
+	s.heartbeatService.IncrementConnection()
+
 	defer func() {
 		s.mu.Lock()
 		delete(s.clients, clientIP)
 		s.mu.Unlock()
 
-		// 更新会话结束时间
-		endTime := time.Now()
-		client.session.EndTime = &endTime
-		client.session.Status = "closed"
-		client.session.BytesSent = client.bytesSent
-		client.session.BytesRecv = client.bytesRecv
-		database.DB.Save(client.session)
+		// 减少连接计数
+		s.heartbeatService.DecrementConnection()
+
+		// 更新会话结束时间（数据库连接失败时不影响正常服务）
+		if database.DB != nil {
+			endTime := time.Now()
+			client.session.EndTime = &endTime
+			client.session.Status = "closed"
+			client.session.BytesSent = client.bytesSent
+			client.session.BytesRecv = client.bytesRecv
+			if err := database.DB.Save(client.session).Error; err != nil {
+				logger.Log.Errorf("保存会话记录失败: %v", err)
+			}
+		}
 	}()
 
 	// 处理请求
@@ -295,8 +318,8 @@ func (s *Socks5Server) handleConnect(client *Client, targetAddr string, port int
 	s.sendReply(client.conn, SUCCEEDED, targetAddr, port)
 
 	// 开始数据转发
-	go s.forwardData(client, targetConn, true)  // 客户端 -> 目标
-	s.forwardData(client, targetConn, false) // 目标 -> 客户端
+	go s.forwardData(client, targetConn, true) // 客户端 -> 目标
+	s.forwardData(client, targetConn, false)   // 目标 -> 客户端
 
 	return nil
 }
@@ -360,23 +383,31 @@ func (s *Socks5Server) forwardData(client *Client, targetConn net.Conn, toTarget
 func (s *Socks5Server) sendReply(conn net.Conn, reply byte, addr string, port int) {
 	// 构建响应
 	response := []byte{SOCKS5_VERSION, reply, 0x00, 0x01}
-	
+
 	// 添加IP地址（这里简化处理，使用127.0.0.1）
 	ip := net.ParseIP("127.0.0.1").To4()
 	response = append(response, ip...)
-	
+
 	// 添加端口
 	portBytes := make([]byte, 2)
 	binary.BigEndian.PutUint16(portBytes, uint16(port))
 	response = append(response, portBytes...)
-	
+
 	conn.Write(response)
 }
 
 func (s *Socks5Server) checkURLFilter(user *database.User, targetAddr string) bool {
-	// 检查URL过滤规则
+	// 检查URL过滤规则（数据库连接失败时允许通过）
+	if database.DB == nil {
+		logger.Log.Warn("数据库连接不可用，跳过URL过滤检查")
+		return true
+	}
+
 	var filters []database.URLFilter
-	database.DB.Where("enabled = ?", true).Find(&filters)
+	if err := database.DB.Where("enabled = ?", true).Find(&filters).Error; err != nil {
+		logger.Log.Errorf("查询URL过滤规则失败: %v", err)
+		return true // 数据库查询失败时允许通过
+	}
 
 	for _, filter := range filters {
 		if strings.Contains(targetAddr, filter.Pattern) {
@@ -390,6 +421,11 @@ func (s *Socks5Server) checkURLFilter(user *database.User, targetAddr string) bo
 }
 
 func (s *Socks5Server) logTraffic(client *Client, targetAddr string, bytes int, sent bool) {
+	// 数据库连接失败时不影响正常服务
+	if database.DB == nil {
+		return
+	}
+
 	// 解析目标地址
 	host, portStr, err := net.SplitHostPort(targetAddr)
 	if err != nil {
@@ -400,12 +436,12 @@ func (s *Socks5Server) logTraffic(client *Client, targetAddr string, bytes int, 
 
 	// 创建流量日志
 	trafficLog := &database.TrafficLog{
-		UserID:    client.user.ID,
-		ClientIP:  client.conn.RemoteAddr().String(),
-		TargetIP:  host,
+		UserID:     client.user.ID,
+		ClientIP:   client.conn.RemoteAddr().String(),
+		TargetIP:   host,
 		TargetPort: port,
-		Protocol:  "tcp",
-		Timestamp: time.Now(),
+		Protocol:   "tcp",
+		Timestamp:  time.Now(),
 	}
 
 	if sent {
@@ -414,7 +450,9 @@ func (s *Socks5Server) logTraffic(client *Client, targetAddr string, bytes int, 
 		trafficLog.BytesRecv = int64(bytes)
 	}
 
-	database.DB.Create(trafficLog)
+	if err := database.DB.Create(trafficLog).Error; err != nil {
+		logger.Log.Errorf("创建流量日志失败: %v", err)
+	}
 }
 
 // GetActiveClients 获取活跃客户端列表
@@ -428,4 +466,3 @@ func (s *Socks5Server) GetActiveClients() []*Client {
 	}
 	return clients
 }
-

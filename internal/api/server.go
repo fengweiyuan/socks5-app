@@ -105,6 +105,14 @@ func (s *Server) setupRoutes() {
 				system.GET("/status", s.handleGetSystemStatus)
 				system.GET("/stats", s.handleGetSystemStats)
 			}
+
+			// 代理健康状态
+			proxy := authenticated.Group("/proxy")
+			{
+				proxy.GET("/health", s.handleGetProxyHealth)
+				proxy.GET("/heartbeat", s.handleGetHeartbeatRecords)
+				proxy.GET("/status", s.handleGetProxyStatus)
+			}
 		}
 	}
 

@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/spf13/viper"
 	"log"
+
+	"github.com/spf13/viper"
 )
 
 type Config struct {
@@ -14,10 +15,10 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port    string `mapstructure:"port"`
-	Host    string `mapstructure:"host"`
-	Mode    string `mapstructure:"mode"`
-	JWTKey  string `mapstructure:"jwt_key"`
+	Port   string `mapstructure:"port"`
+	Host   string `mapstructure:"host"`
+	Mode   string `mapstructure:"mode"`
+	JWTKey string `mapstructure:"jwt_key"`
 }
 
 type DatabaseConfig struct {
@@ -30,14 +31,15 @@ type DatabaseConfig struct {
 }
 
 type ProxyConfig struct {
-	Port     string `mapstructure:"port"`
-	Host     string `mapstructure:"host"`
-	Timeout  int    `mapstructure:"timeout"`
-	MaxConns int    `mapstructure:"max_connections"`
+	Port              string `mapstructure:"port"`
+	Host              string `mapstructure:"host"`
+	Timeout           int    `mapstructure:"timeout"`
+	MaxConns          int    `mapstructure:"max_connections"`
+	HeartbeatInterval int    `mapstructure:"heartbeat_interval"` // 心跳间隔（秒）
 }
 
 type AuthConfig struct {
-	SessionTimeout int `mapstructure:"session_timeout"`
+	SessionTimeout   int `mapstructure:"session_timeout"`
 	MaxLoginAttempts int `mapstructure:"max_login_attempts"`
 }
 
@@ -91,6 +93,7 @@ func setDefaults() {
 	viper.SetDefault("proxy.host", "0.0.0.0")
 	viper.SetDefault("proxy.timeout", 30)
 	viper.SetDefault("proxy.max_connections", 1000)
+	viper.SetDefault("proxy.heartbeat_interval", 5)
 
 	viper.SetDefault("auth.session_timeout", 3600)
 	viper.SetDefault("auth.max_login_attempts", 5)
@@ -99,4 +102,3 @@ func setDefaults() {
 	viper.SetDefault("log.file", "logs/app.log")
 	viper.SetDefault("log.format", "json")
 }
-

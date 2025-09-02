@@ -82,19 +82,18 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup lang="js">
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
-import type { FormInstance, FormRules } from 'element-plus'
 
 const authStore = useAuthStore()
 const loading = ref(false)
 const filters = ref([])
 const showCreateDialog = ref(false)
 const editingFilter = ref(null)
-const filterFormRef = ref<FormInstance>()
+const filterFormRef = ref()
 
 const filterForm = ref({
   pattern: '',
@@ -103,7 +102,7 @@ const filterForm = ref({
   enabled: true
 })
 
-const rules: FormRules = {
+const rules = {
   pattern: [
     { required: true, message: '请输入匹配模式', trigger: 'blur' }
   ],
@@ -134,7 +133,7 @@ const fetchFilters = async () => {
   }
 }
 
-const editFilter = (filter: any) => {
+const editFilter = (filter) => {
   editingFilter.value = filter
   filterForm.value = { ...filter }
   showCreateDialog.value = true
@@ -173,7 +172,7 @@ const saveFilter = async () => {
   })
 }
 
-const deleteFilter = async (filterId: number) => {
+const deleteFilter = async (filterId) => {
   try {
     await ElMessageBox.confirm('确定要删除这个过滤规则吗？', '提示', {
       confirmButtonText: '确定',
@@ -199,7 +198,7 @@ const deleteFilter = async (filterId: number) => {
   }
 }
 
-const formatDate = (date: string) => {
+const formatDate = (date) => {
   return new Date(date).toLocaleString()
 }
 

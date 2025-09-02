@@ -116,6 +116,24 @@ CREATE TABLE IF NOT EXISTS bandwidth_limits (
     INDEX idx_enabled (enabled)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 创建代理服务器心跳表
+CREATE TABLE IF NOT EXISTS proxy_heartbeats (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    proxy_id VARCHAR(100) NOT NULL,
+    proxy_host VARCHAR(50) NOT NULL,
+    proxy_port VARCHAR(10) NOT NULL,
+    status ENUM('online', 'offline') DEFAULT 'online',
+    active_conns INT DEFAULT 0,
+    total_conns BIGINT DEFAULT 0,
+    last_heartbeat TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_proxy_id (proxy_id),
+    INDEX idx_proxy_id (proxy_id),
+    INDEX idx_status (status),
+    INDEX idx_last_heartbeat (last_heartbeat)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 插入默认管理员用户（密码为 'password' 的bcrypt哈希）
 INSERT IGNORE INTO users (username, password, email, role, status) VALUES 
 ('admin', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin@example.com', 'admin', 'active');

@@ -37,6 +37,11 @@
           <el-icon><Filter /></el-icon>
           <template #title>URL过滤</template>
         </el-menu-item>
+        
+        <el-menu-item index="/proxy-health">
+          <el-icon><Monitor /></el-icon>
+          <template #title>代理健康状态</template>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 
@@ -73,7 +78,7 @@
   </el-container>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
@@ -102,7 +107,7 @@ const toggleCollapse = () => {
   isCollapse.value = !isCollapse.value
 }
 
-const handleCommand = async (command: string) => {
+const handleCommand = async (command) => {
   if (command === 'logout') {
     try {
       await ElMessageBox.confirm('确定要退出登录吗？', '提示', {

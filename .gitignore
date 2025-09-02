@@ -1,0 +1,19 @@
+# Binaries
+bin/
+server
+proxy
+
+# Logs
+logs/
+*.log
+*.pid
+
+# Build output
+dist/
+web/build/
+
+# Data
+data/
+
+# Environment
+.env
