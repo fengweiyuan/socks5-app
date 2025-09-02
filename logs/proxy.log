@@ -1,0 +1,350 @@
+数据库连接成功
+
+2025/09/03 02:27:56 [32m/Users/fwy/code/pub/socks5-app/internal/database/database.go:67
+[0m[33m[0.615ms] [34;1m[rows:-][0m SELECT DATABASE()
+
+2025/09/03 02:27:56 [32m/Users/fwy/code/pub/socks5-app/internal/database/database.go:67
+[0m[33m[2.795ms] [34;1m[rows:1][0m SELECT SCHEMA_NAME from Information_schema.SCHEMATA where SCHEMA_NAME LIKE 'socks5_db%' ORDER BY SCHEMA_NAME='socks5_db' DESC,SCHEMA_NAME limit 1
+
+2025/09/03 02:27:56 [32m/Users/fwy/code/pub/socks5-app/internal/database/database.go:67
+[0m[33m[3.761ms] [34;1m[rows:-][0m SELECT count(*) FROM information_schema.tables WHERE table_schema = 'socks5_db' AND table_name = 'users' AND table_type = 'BASE TABLE'
+
+2025/09/03 02:27:56 [32m/Users/fwy/code/pub/socks5-app/internal/database/database.go:67
+[0m[33m[0.931ms] [34;1m[rows:-][0m SELECT DATABASE()
+
+2025/09/03 02:27:56 [32m/Users/fwy/code/pub/socks5-app/internal/database/database.go:67
+[0m[33m[2.511ms] [34;1m[rows:1][0m SELECT SCHEMA_NAME from Information_schema.SCHEMATA where SCHEMA_NAME LIKE 'socks5_db%' ORDER BY SCHEMA_NAME='socks5_db' DESC,SCHEMA_NAME limit 1
+
+2025/09/03 02:27:56 [32m/Users/fwy/code/pub/socks5-app/internal/database/database.go:67
+[0m[33m[2.417ms] [34;1m[rows:-][0m SELECT * FROM `users` LIMIT 1
+
+2025/09/03 02:27:56 [32m/Users/fwy/code/pub/socks5-app/internal/database/database.go:67
+[0m[33m[4.030ms] [34;1m[rows:-][0m SELECT column_name, column_default, is_nullable = 'YES', data_type, character_maximum_length, column_type, column_key, extra, column_comment, numeric_precision, numeric_scale , datetime_precision FROM information_schema.columns WHERE table_schema = 'socks5_db' AND table_name = 'users' ORDER BY ORDINAL_POSITION
+
+2025/09/03 02:27:56 [31;1m [35;1mError 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists
+[0m[33m[1.445ms] [34;1m[rows:0][0m ALTER TABLE `users` DROP FOREIGN KEY `uni_users_username`
+数据库表迁移失败: Error 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists
+数据库表迁移失败，某些功能可能不可用
+
+2025/09/03 02:27:56 [32m/Users/fwy/code/pub/socks5-app/internal/database/database.go:82
+[0m[33m[0.931ms] [34;1m[rows:1][0m SELECT count(*) FROM `users` WHERE `users`.`deleted_at` IS NULL
+SOCKS5服务器启动成功，监听地址: 0.0.0.0:1082
+启动心跳服务，间隔: 5s
+
+2025/09/03 02:27:56 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[1.751ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:27:56 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[5.021ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:27:56.743',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:27:56.744' WHERE `id` = 3
+
+2025/09/03 02:28:01 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[2.611ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:28:01 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[5.014ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:28:01.751',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:28:01.753' WHERE `id` = 3
+
+2025/09/03 02:28:06 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[5.450ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:28:06 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[7.112ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:28:06.754',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:28:06.756' WHERE `id` = 3
+
+2025/09/03 02:28:11 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[2.806ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:28:11 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[4.647ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:28:11.752',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:28:11.753' WHERE `id` = 3
+
+2025/09/03 02:28:16 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[3.879ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:28:16 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[5.506ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:28:16.753',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:28:16.754' WHERE `id` = 3
+
+2025/09/03 02:28:21 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[4.025ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:28:21 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[6.639ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:28:21.753',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:28:21.755' WHERE `id` = 3
+
+2025/09/03 02:28:26 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[2.892ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:28:26 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[4.720ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:28:26.752',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:28:26.753' WHERE `id` = 3
+
+2025/09/03 02:28:31 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[3.137ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:28:31 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[5.460ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:28:31.752',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:28:31.753' WHERE `id` = 3
+
+2025/09/03 02:28:36 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[4.433ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:28:36 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[8.575ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:28:36.753',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:28:36.755' WHERE `id` = 3
+
+2025/09/03 02:28:41 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[4.731ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:28:41 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[6.079ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:28:41.754',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:28:41.755' WHERE `id` = 3
+
+2025/09/03 02:28:46 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[3.154ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:28:46 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[5.183ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:28:46.752',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:28:46.753' WHERE `id` = 3
+
+2025/09/03 02:28:51 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[5.217ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:28:51 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[11.060ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:28:51.755',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:28:51.757' WHERE `id` = 3
+
+2025/09/03 02:28:56 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[3.322ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:28:56 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[5.977ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:28:56.753',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:28:56.754' WHERE `id` = 3
+
+2025/09/03 02:29:01 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[2.782ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:29:01 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[7.197ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:29:01.752',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:29:01.753' WHERE `id` = 3
+
+2025/09/03 02:29:06 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[5.739ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:29:06 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[11.169ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:29:06.756',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:29:06.759' WHERE `id` = 3
+
+2025/09/03 02:29:11 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[5.500ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:29:11 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[9.225ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:29:11.755',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:29:11.758' WHERE `id` = 3
+
+2025/09/03 02:29:16 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[4.492ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:29:16 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[8.568ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:29:16.754',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:29:16.756' WHERE `id` = 3
+
+2025/09/03 02:29:21 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[4.875ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:29:21 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[8.806ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:29:21.755',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:29:21.756' WHERE `id` = 3
+
+2025/09/03 02:29:26 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[4.283ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:29:26 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[7.967ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:29:26.754',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:29:26.755' WHERE `id` = 3
+
+2025/09/03 02:29:31 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[5.588ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:29:31 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[9.164ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:29:31.755',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:29:31.757' WHERE `id` = 3
+
+2025/09/03 02:29:36 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[4.530ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:29:36 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[9.349ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:29:36.754',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:29:36.756' WHERE `id` = 3
+
+2025/09/03 02:29:41 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[5.287ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:29:41 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[8.589ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:29:41.755',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:29:41.757' WHERE `id` = 3
+
+2025/09/03 02:29:46 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[5.228ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:29:46 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[9.986ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:29:46.755',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:29:46.757' WHERE `id` = 3
+
+2025/09/03 02:29:51 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[5.081ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:29:51 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[9.189ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:29:51.755',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:29:51.757' WHERE `id` = 3
+
+2025/09/03 02:29:56 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[3.905ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:29:56 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[6.525ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:29:56.754',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:29:56.755' WHERE `id` = 3
+
+2025/09/03 02:30:01 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[5.144ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:30:01 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[7.674ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:30:01.755',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:30:01.757' WHERE `id` = 3
+
+2025/09/03 02:30:06 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[5.408ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:30:06 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[8.584ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:30:06.755',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:30:06.757' WHERE `id` = 3
+
+2025/09/03 02:30:11 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[5.082ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:30:11 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[7.971ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:30:11.755',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:30:11.757' WHERE `id` = 3
+
+2025/09/03 02:30:16 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[4.152ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:30:16 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[9.574ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:30:16.754',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:30:16.756' WHERE `id` = 3
+
+2025/09/03 02:30:21 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[3.649ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:30:21 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[5.271ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:30:21.754',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:30:21.755' WHERE `id` = 3
+
+2025/09/03 02:30:26 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[1.553ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:30:26 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[2.898ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:30:26.752',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:30:26.753' WHERE `id` = 3
+
+2025/09/03 02:30:31 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[1.592ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:30:31 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[3.309ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:30:31.751',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:30:31.752' WHERE `id` = 3
+
+2025/09/03 02:30:36 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[2.458ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:30:36 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[3.411ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:30:36.752',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:30:36.753' WHERE `id` = 3
+
+2025/09/03 02:30:41 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[5.290ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:30:41 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[6.776ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:30:41.756',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:30:41.758' WHERE `id` = 3
+
+2025/09/03 02:30:46 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[3.122ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:30:46 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[5.331ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:30:46.754',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:30:46.755' WHERE `id` = 3
+
+2025/09/03 02:30:51 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[5.632ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:30:51 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[8.011ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:30:51.756',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:30:51.758' WHERE `id` = 3
+
+2025/09/03 02:30:56 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[4.534ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:30:56 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[8.805ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:30:56.754',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:30:56.756' WHERE `id` = 3
+
+2025/09/03 02:31:01 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[5.012ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:31:01 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[9.251ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:31:01.756',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:31:01.758' WHERE `id` = 3
+
+2025/09/03 02:31:06 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[2.117ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:31:06 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[3.912ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:31:06.753',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:31:06.754' WHERE `id` = 3
+
+2025/09/03 02:31:11 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[4.273ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:31:11 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[7.685ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:31:11.755',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:31:11.757' WHERE `id` = 3
+
+2025/09/03 02:31:16 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[3.670ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:31:16 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[5.799ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:31:16.754',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:31:16.757' WHERE `id` = 3
+
+2025/09/03 02:31:21 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[4.366ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:31:21 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[9.087ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:31:21.755',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:31:21.757' WHERE `id` = 3
+
+2025/09/03 02:31:26 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[3.864ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:31:26 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[4.784ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:31:26.754',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:31:26.755' WHERE `id` = 3
+
+2025/09/03 02:31:31 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[2.971ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:31:31 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[5.033ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:31:31.754',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:31:31.755' WHERE `id` = 3
+
+2025/09/03 02:31:36 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[4.134ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:31:36 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[8.668ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:31:36.755',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:31:36.757' WHERE `id` = 3
+
+2025/09/03 02:31:41 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[1.962ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:31:41 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[4.197ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:31:41.753',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:31:41.754' WHERE `id` = 3
+
+2025/09/03 02:31:46 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[4.568ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:31:46 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[5.310ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:31:46.756',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:31:46.757' WHERE `id` = 3
+
+2025/09/03 02:31:51 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[3.060ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:31:51 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[5.907ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:31:51.754',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:31:51.755' WHERE `id` = 3
+
+2025/09/03 02:31:56 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[3.333ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:31:56 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[4.560ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:31:56.754',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:31:56.756' WHERE `id` = 3
+
+2025/09/03 02:32:01 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[2.219ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:32:01 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[3.976ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:32:01.753',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:32:01.754' WHERE `id` = 3
+
+2025/09/03 02:32:06 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[2.127ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:32:06 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[7.881ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:32:06.752',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:32:06.754' WHERE `id` = 3
+
+2025/09/03 02:32:11 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[5.447ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:32:11 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[6.296ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:32:11.757',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:32:11.758' WHERE `id` = 3
+
+2025/09/03 02:32:16 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:133
+[0m[33m[5.187ms] [34;1m[rows:1][0m SELECT * FROM `proxy_heartbeats` WHERE proxy_id = 'fwymac.local:1082' ORDER BY `proxy_heartbeats`.`id` LIMIT 1
+
+2025/09/03 02:32:16 [32m/Users/fwy/code/pub/socks5-app/internal/heartbeat/heartbeat.go:154
+[0m[33m[9.297ms] [34;1m[rows:1][0m UPDATE `proxy_heartbeats` SET `active_conns`=0,`last_heartbeat`='2025-09-03 02:32:16.756',`proxy_host`='0.0.0.0',`proxy_port`='1082',`status`='online',`total_conns`=0,`updated_at`='2025-09-03 02:32:16.759' WHERE `id` = 3

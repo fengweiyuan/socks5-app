@@ -93,6 +93,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
+import { formatDate } from '@/utils/formatters'
 
 const authStore = useAuthStore()
 const loading = ref(false)
@@ -212,9 +213,7 @@ const deleteUser = async (userId) => {
   }
 }
 
-const formatDate = (date) => {
-  return new Date(date).toLocaleString()
-}
+
 
 onMounted(() => {
   fetchUsers()

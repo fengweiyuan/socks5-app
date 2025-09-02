@@ -1,0 +1,105 @@
+数据库连接成功
+
+2025/09/03 02:31:39 [32m/Users/fwy/code/pub/socks5-app/internal/database/database.go:67
+[0m[33m[0.801ms] [34;1m[rows:-][0m SELECT DATABASE()
+
+2025/09/03 02:31:39 [32m/Users/fwy/code/pub/socks5-app/internal/database/database.go:67
+[0m[33m[3.737ms] [34;1m[rows:1][0m SELECT SCHEMA_NAME from Information_schema.SCHEMATA where SCHEMA_NAME LIKE 'socks5_db%' ORDER BY SCHEMA_NAME='socks5_db' DESC,SCHEMA_NAME limit 1
+
+2025/09/03 02:31:39 [32m/Users/fwy/code/pub/socks5-app/internal/database/database.go:67
+[0m[33m[3.613ms] [34;1m[rows:-][0m SELECT count(*) FROM information_schema.tables WHERE table_schema = 'socks5_db' AND table_name = 'users' AND table_type = 'BASE TABLE'
+
+2025/09/03 02:31:39 [32m/Users/fwy/code/pub/socks5-app/internal/database/database.go:67
+[0m[33m[0.900ms] [34;1m[rows:-][0m SELECT DATABASE()
+
+2025/09/03 02:31:39 [32m/Users/fwy/code/pub/socks5-app/internal/database/database.go:67
+[0m[33m[2.215ms] [34;1m[rows:1][0m SELECT SCHEMA_NAME from Information_schema.SCHEMATA where SCHEMA_NAME LIKE 'socks5_db%' ORDER BY SCHEMA_NAME='socks5_db' DESC,SCHEMA_NAME limit 1
+
+2025/09/03 02:31:39 [32m/Users/fwy/code/pub/socks5-app/internal/database/database.go:67
+[0m[33m[1.727ms] [34;1m[rows:-][0m SELECT * FROM `users` LIMIT 1
+
+2025/09/03 02:31:39 [32m/Users/fwy/code/pub/socks5-app/internal/database/database.go:67
+[0m[33m[2.928ms] [34;1m[rows:-][0m SELECT column_name, column_default, is_nullable = 'YES', data_type, character_maximum_length, column_type, column_key, extra, column_comment, numeric_precision, numeric_scale , datetime_precision FROM information_schema.columns WHERE table_schema = 'socks5_db' AND table_name = 'users' ORDER BY ORDINAL_POSITION
+
+2025/09/03 02:31:39 [31;1m [35;1mError 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists
+[0m[33m[1.045ms] [34;1m[rows:0][0m ALTER TABLE `users` DROP FOREIGN KEY `uni_users_username`
+数据库表迁移失败: Error 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists
+数据库表迁移失败，某些功能可能不可用
+
+2025/09/03 02:31:39 [32m/Users/fwy/code/pub/socks5-app/internal/database/database.go:82
+[0m[33m[0.672ms] [34;1m[rows:1][0m SELECT count(*) FROM `users` WHERE `users`.`deleted_at` IS NULL
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] POST   /api/v1/auth/login        --> socks5-app/internal/api.(*Server).handleLogin-fm (4 handlers)
+[GIN-debug] POST   /api/v1/auth/logout       --> socks5-app/internal/api.(*Server).handleLogout-fm (5 handlers)
+[GIN-debug] GET    /api/v1/users             --> socks5-app/internal/api.(*Server).handleGetUsers-fm (5 handlers)
+[GIN-debug] POST   /api/v1/users             --> socks5-app/internal/api.(*Server).handleCreateUser-fm (6 handlers)
+[GIN-debug] GET    /api/v1/users/:id         --> socks5-app/internal/api.(*Server).handleGetUser-fm (5 handlers)
+[GIN-debug] PUT    /api/v1/users/:id         --> socks5-app/internal/api.(*Server).handleUpdateUser-fm (5 handlers)
+[GIN-debug] DELETE /api/v1/users/:id         --> socks5-app/internal/api.(*Server).handleDeleteUser-fm (6 handlers)
+[GIN-debug] GET    /api/v1/traffic           --> socks5-app/internal/api.(*Server).handleGetTrafficStats-fm (5 handlers)
+[GIN-debug] GET    /api/v1/traffic/realtime  --> socks5-app/internal/api.(*Server).handleGetRealtimeTraffic-fm (5 handlers)
+[GIN-debug] POST   /api/v1/traffic/limit     --> socks5-app/internal/api.(*Server).handleSetBandwidthLimit-fm (6 handlers)
+[GIN-debug] GET    /api/v1/logs              --> socks5-app/internal/api.(*Server).handleGetLogs-fm (5 handlers)
+[GIN-debug] GET    /api/v1/logs/export       --> socks5-app/internal/api.(*Server).handleExportLogs-fm (5 handlers)
+[GIN-debug] DELETE /api/v1/logs              --> socks5-app/internal/api.(*Server).handleClearLogs-fm (6 handlers)
+[GIN-debug] GET    /api/v1/online            --> socks5-app/internal/api.(*Server).handleGetOnlineUsers-fm (5 handlers)
+[GIN-debug] DELETE /api/v1/online/:id        --> socks5-app/internal/api.(*Server).handleDisconnectUser-fm (6 handlers)
+[GIN-debug] GET    /api/v1/filters           --> socks5-app/internal/api.(*Server).handleGetURLFilters-fm (5 handlers)
+[GIN-debug] POST   /api/v1/filters           --> socks5-app/internal/api.(*Server).handleCreateURLFilter-fm (6 handlers)
+[GIN-debug] PUT    /api/v1/filters/:id       --> socks5-app/internal/api.(*Server).handleUpdateURLFilter-fm (6 handlers)
+[GIN-debug] DELETE /api/v1/filters/:id       --> socks5-app/internal/api.(*Server).handleDeleteURLFilter-fm (6 handlers)
+[GIN-debug] GET    /api/v1/whitelist         --> socks5-app/internal/api.(*Server).handleGetIPWhitelist-fm (5 handlers)
+[GIN-debug] POST   /api/v1/whitelist         --> socks5-app/internal/api.(*Server).handleAddIPWhitelist-fm (6 handlers)
+[GIN-debug] DELETE /api/v1/whitelist/:id     --> socks5-app/internal/api.(*Server).handleRemoveIPWhitelist-fm (6 handlers)
+[GIN-debug] GET    /api/v1/system/status     --> socks5-app/internal/api.(*Server).handleGetSystemStatus-fm (5 handlers)
+[GIN-debug] GET    /api/v1/system/stats      --> socks5-app/internal/api.(*Server).handleGetSystemStats-fm (5 handlers)
+[GIN-debug] GET    /api/v1/proxy/health      --> socks5-app/internal/api.(*Server).handleGetProxyHealth-fm (5 handlers)
+[GIN-debug] GET    /api/v1/proxy/heartbeat   --> socks5-app/internal/api.(*Server).handleGetHeartbeatRecords-fm (5 handlers)
+[GIN-debug] GET    /api/v1/proxy/status      --> socks5-app/internal/api.(*Server).handleGetProxyStatus-fm (5 handlers)
+[GIN-debug] POST   /api/v1/proxy/cleanup     --> socks5-app/internal/api.(*Server).handleCleanupHeartbeats-fm (6 handlers)
+[GIN-debug] GET    /static/*filepath         --> github.com/gin-gonic/gin.(*RouterGroup).createStaticHandler.func1 (4 handlers)
+[GIN-debug] HEAD   /static/*filepath         --> github.com/gin-gonic/gin.(*RouterGroup).createStaticHandler.func1 (4 handlers)
+[GIN-debug] GET    /                         --> socks5-app/internal/api.(*Server).setupRoutes.(*RouterGroup).StaticFile.func14 (4 handlers)
+[GIN-debug] HEAD   /                         --> socks5-app/internal/api.(*Server).setupRoutes.(*RouterGroup).StaticFile.func14 (4 handlers)
+[GIN-debug] GET    /favicon.ico              --> socks5-app/internal/api.(*Server).setupRoutes.(*RouterGroup).StaticFile.func15 (4 handlers)
+[GIN-debug] HEAD   /favicon.ico              --> socks5-app/internal/api.(*Server).setupRoutes.(*RouterGroup).StaticFile.func15 (4 handlers)
+API服务器启动成功，监听地址: 0.0.0.0:8012
+[GIN-debug] [WARNING] You trusted all proxies, this is NOT safe. We recommend you to set a value.
+Please check https://pkg.go.dev/github.com/gin-gonic/gin#readme-don-t-trust-all-proxies for details.
+[GIN-debug] Listening and serving HTTP on 0.0.0.0:8012
+
+2025/09/03 02:31:41 [32m/Users/fwy/code/pub/socks5-app/internal/api/proxy.go:73
+[0m[33m[3.628ms] [34;1m[rows:3][0m SELECT * FROM `proxy_heartbeats` ORDER BY last_heartbeat DESC
+[GIN] 2025/09/03 - 02:31:41 | 200 |    4.117708ms |             ::1 | GET      "/api/v1/proxy/health"
+
+2025/09/03 02:31:46 [32m/Users/fwy/code/pub/socks5-app/internal/api/proxy.go:73
+[0m[33m[3.397ms] [34;1m[rows:3][0m SELECT * FROM `proxy_heartbeats` ORDER BY last_heartbeat DESC
+[GIN] 2025/09/03 - 02:31:46 | 200 |    3.707584ms |             ::1 | GET      "/api/v1/proxy/health"
+
+2025/09/03 02:31:51 [32m/Users/fwy/code/pub/socks5-app/internal/api/proxy.go:73
+[0m[33m[3.914ms] [34;1m[rows:3][0m SELECT * FROM `proxy_heartbeats` ORDER BY last_heartbeat DESC
+[GIN] 2025/09/03 - 02:31:51 | 200 |    4.211792ms |             ::1 | GET      "/api/v1/proxy/health"
+[GIN] 2025/09/03 - 02:31:54 | 200 |    2.054459ms |             ::1 | GET      "/"
+
+2025/09/03 02:31:56 [32m/Users/fwy/code/pub/socks5-app/internal/api/proxy.go:73
+[0m[33m[1.804ms] [34;1m[rows:3][0m SELECT * FROM `proxy_heartbeats` ORDER BY last_heartbeat DESC
+[GIN] 2025/09/03 - 02:31:56 | 200 |     1.97975ms |             ::1 | GET      "/api/v1/proxy/health"
+
+2025/09/03 02:32:01 [32m/Users/fwy/code/pub/socks5-app/internal/api/proxy.go:73
+[0m[33m[2.454ms] [34;1m[rows:3][0m SELECT * FROM `proxy_heartbeats` ORDER BY last_heartbeat DESC
+[GIN] 2025/09/03 - 02:32:01 | 200 |    2.745917ms |             ::1 | GET      "/api/v1/proxy/health"
+
+2025/09/03 02:32:06 [32m/Users/fwy/code/pub/socks5-app/internal/api/proxy.go:73
+[0m[33m[2.373ms] [34;1m[rows:3][0m SELECT * FROM `proxy_heartbeats` ORDER BY last_heartbeat DESC
+[GIN] 2025/09/03 - 02:32:06 | 200 |     2.55525ms |             ::1 | GET      "/api/v1/proxy/health"
+
+2025/09/03 02:32:11 [32m/Users/fwy/code/pub/socks5-app/internal/api/proxy.go:73
+[0m[33m[3.189ms] [34;1m[rows:3][0m SELECT * FROM `proxy_heartbeats` ORDER BY last_heartbeat DESC
+[GIN] 2025/09/03 - 02:32:11 | 200 |    3.609334ms |             ::1 | GET      "/api/v1/proxy/health"
+
+2025/09/03 02:32:16 [32m/Users/fwy/code/pub/socks5-app/internal/api/proxy.go:73
+[0m[33m[2.915ms] [34;1m[rows:3][0m SELECT * FROM `proxy_heartbeats` ORDER BY last_heartbeat DESC
+[GIN] 2025/09/03 - 02:32:16 | 200 |      3.2435ms |             ::1 | GET      "/api/v1/proxy/health"

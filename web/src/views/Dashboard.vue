@@ -144,6 +144,7 @@ import {
 import VChart from 'vue-echarts'
 import { User, View, Connection, DataLine } from '@element-plus/icons-vue'
 import api from '@/api/auth'
+import { formatBytes, formatTime } from '@/utils/formatters'
 
 use([
   CanvasRenderer,
@@ -165,18 +166,6 @@ const stats = ref({
 const onlineUsers = ref([])
 const loading = ref(true)
 let interval = null
-
-const formatBytes = (bytes) => {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-}
-
-const formatTime = (time) => {
-  return new Date(time).toLocaleString()
-}
 
 const trafficChartOption = ref({
   title: {
@@ -220,10 +209,34 @@ const fetchDashboardData = async () => {
       api.get('/traffic'),
       api.get('/online')
     ])
-    stats.value = statsRes.stats
-    onlineUsers.value = onlineRes.online_users || []
+    
+    // 确保数据存在且为有效值
+    if (statsRes && statsRes.stats) {
+      stats.value = {
+        totalBytesSent: statsRes.stats.total_bytes_sent || 0,
+        totalBytesRecv: statsRes.stats.total_bytes_recv || 0,
+        activeConnections: statsRes.stats.active_connections || 0,
+        totalUsers: statsRes.stats.total_users || 0,
+        onlineUsers: statsRes.stats.online_users || 0
+      }
+    }
+    
+    if (onlineRes && onlineRes.online_users) {
+      onlineUsers.value = onlineRes.online_users
+    } else {
+      onlineUsers.value = []
+    }
   } catch (error) {
     console.error('获取仪表盘数据失败:', error)
+    // 设置默认值避免显示 NaN
+    stats.value = {
+      totalBytesSent: 0,
+      totalBytesRecv: 0,
+      activeConnections: 0,
+      totalUsers: 0,
+      onlineUsers: 0
+    }
+    onlineUsers.value = []
   } finally {
     loading.value = false
   }

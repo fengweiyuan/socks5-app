@@ -52,6 +52,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
+import { formatDate } from '@/utils/formatters'
 
 const authStore = useAuthStore()
 const loading = ref(false)
@@ -143,9 +144,7 @@ const handleCurrentChange = (val) => {
   fetchLogs()
 }
 
-const formatDate = (date) => {
-  return new Date(date).toLocaleString()
-}
+
 
 onMounted(() => {
   fetchLogs()

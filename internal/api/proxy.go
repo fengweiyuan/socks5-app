@@ -1,20 +1,22 @@
 package api
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"socks5-app/internal/database"
+
+	"github.com/gin-gonic/gin"
 )
 
 // ProxyHealthResponse 代理健康状态响应
 type ProxyHealthResponse struct {
-	Status      string                `json:"status"`       // overall, online, offline, degraded
-	Message     string                `json:"message"`      // 状态描述
-	ProxyServers []ProxyServerStatus  `json:"proxy_servers"` // 代理服务器列表
-	Summary     ProxyHealthSummary    `json:"summary"`      // 健康状态汇总
+	Status       string              `json:"status"`        // overall, online, offline, degraded
+	Message      string              `json:"message"`       // 状态描述
+	ProxyServers []ProxyServerStatus `json:"proxy_servers"` // 代理服务器列表
+	Summary      ProxyHealthSummary  `json:"summary"`       // 健康状态汇总
 }
 
 // ProxyServerStatus 代理服务器状态
@@ -32,11 +34,11 @@ type ProxyServerStatus struct {
 
 // ProxyHealthSummary 健康状态汇总
 type ProxyHealthSummary struct {
-	TotalServers    int   `json:"total_servers"`
-	OnlineServers   int   `json:"online_servers"`
-	OfflineServers  int   `json:"offline_servers"`
-	TotalActiveConns int  `json:"total_active_conns"`
-	TotalConns      int64 `json:"total_conns"`
+	TotalServers     int   `json:"total_servers"`
+	OnlineServers    int   `json:"online_servers"`
+	OfflineServers   int   `json:"offline_servers"`
+	TotalActiveConns int   `json:"total_active_conns"`
+	TotalConns       int64 `json:"total_conns"`
 }
 
 // HeartbeatRecordsResponse 心跳记录响应
@@ -53,15 +55,15 @@ func (s *Server) handleGetProxyHealth(c *gin.Context) {
 	// 如果数据库连接不可用，返回基本状态
 	if database.DB == nil {
 		c.JSON(http.StatusOK, gin.H{
-			"status":  "degraded",
-			"message": "数据库连接不可用，无法获取详细健康状态",
+			"status":        "degraded",
+			"message":       "数据库连接不可用，无法获取详细健康状态",
 			"proxy_servers": []ProxyServerStatus{},
 			"summary": ProxyHealthSummary{
-				TotalServers:    0,
-				OnlineServers:   0,
-				OfflineServers:  0,
+				TotalServers:     0,
+				OnlineServers:    0,
+				OfflineServers:   0,
 				TotalActiveConns: 0,
-				TotalConns:      0,
+				TotalConns:       0,
 			},
 		})
 		return
@@ -79,10 +81,10 @@ func (s *Server) handleGetProxyHealth(c *gin.Context) {
 	now := time.Now()
 	var proxyServers []ProxyServerStatus
 	var summary ProxyHealthSummary
-	
+
 	// 用于去重的map，因为可能有多个心跳记录
 	proxyMap := make(map[string]*database.ProxyHeartbeat)
-	
+
 	// 获取每个代理服务器的最新心跳记录
 	for _, heartbeat := range heartbeats {
 		if existing, exists := proxyMap[heartbeat.ProxyID]; !exists || heartbeat.LastHeartbeat.After(existing.LastHeartbeat) {
@@ -92,27 +94,30 @@ func (s *Server) handleGetProxyHealth(c *gin.Context) {
 	}
 
 	summary.TotalServers = len(proxyMap)
-	
+
+	// 心跳超时时间：15秒（用户要求）
+	const heartbeatTimeout = 15 * time.Second
+
 	for _, heartbeat := range proxyMap {
-		// 判断服务器是否健康（30秒内有心跳认为健康）
-		isHealthy := now.Sub(heartbeat.LastHeartbeat) <= 30*time.Second
+		// 判断服务器是否健康（15秒内有心跳认为健康）
+		isHealthy := now.Sub(heartbeat.LastHeartbeat) <= heartbeatTimeout
 		healthMessage := "正常"
 		status := heartbeat.Status
-		
+
 		if !isHealthy {
 			healthMessage = "心跳超时"
 			status = "offline"
 		}
-		
-		if status == "online" {
+
+		if status == "online" && isHealthy {
 			summary.OnlineServers++
 		} else {
 			summary.OfflineServers++
 		}
-		
+
 		summary.TotalActiveConns += heartbeat.ActiveConns
 		summary.TotalConns += heartbeat.TotalConns
-		
+
 		proxyServers = append(proxyServers, ProxyServerStatus{
 			ProxyID:       heartbeat.ProxyID,
 			ProxyHost:     heartbeat.ProxyHost,
@@ -129,7 +134,7 @@ func (s *Server) handleGetProxyHealth(c *gin.Context) {
 	// 计算整体状态
 	overallStatus := "online"
 	message := "所有代理服务器运行正常"
-	
+
 	if summary.OnlineServers == 0 {
 		overallStatus = "offline"
 		message = "所有代理服务器离线"
@@ -214,8 +219,8 @@ func (s *Server) handleGetProxyStatus(c *gin.Context) {
 	if database.DB == nil {
 		c.JSON(http.StatusOK, gin.H{
 			"database_connected": false,
-			"message": "数据库连接不可用，代理服务正常运行",
-			"proxy_running": true,
+			"message":            "数据库连接不可用，代理服务正常运行",
+			"proxy_running":      true,
 		})
 		return
 	}
@@ -247,10 +252,34 @@ func (s *Server) handleGetProxyStatus(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"database_connected":  true,
-		"active_proxy_count":  len(activeProxies),
-		"total_active_conns":  totalActiveConns,
+		"database_connected": true,
+		"active_proxy_count": len(activeProxies),
+		"total_active_conns": totalActiveConns,
 		"total_conns":        totalConns,
 		"last_update":        time.Now(),
+	})
+}
+
+// cleanupExpiredHeartbeats 清理过期的心跳记录
+func (s *Server) cleanupExpiredHeartbeats() {
+	if database.DB == nil {
+		return
+	}
+
+	// 清理超过1小时的心跳记录
+	expireTime := time.Now().Add(-1 * time.Hour)
+
+	if err := database.DB.Where("last_heartbeat < ?", expireTime).Delete(&database.ProxyHeartbeat{}).Error; err != nil {
+		// 记录错误但不中断程序
+		log.Printf("清理过期心跳记录失败: %v", err)
+	}
+}
+
+// handleCleanupHeartbeats 手动清理心跳记录接口
+func (s *Server) handleCleanupHeartbeats(c *gin.Context) {
+	s.cleanupExpiredHeartbeats()
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "心跳记录清理完成",
+		"timestamp": time.Now(),
 	})
 }

@@ -4,9 +4,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"socks5-app/internal/database"
 	"socks5-app/internal/logger"
+
+	"github.com/gin-gonic/gin"
 )
 
 type TrafficStats struct {
@@ -25,8 +26,8 @@ type RealtimeTraffic struct {
 }
 
 type BandwidthLimitRequest struct {
-	UserID uint  `json:"user_id" binding:"required"`
-	Limit  int64 `json:"limit" binding:"required"`
+	UserID uint   `json:"user_id" binding:"required"`
+	Limit  int64  `json:"limit" binding:"required"`
 	Period string `json:"period"`
 }
 
@@ -35,35 +36,75 @@ func (s *Server) handleGetTrafficStats(c *gin.Context) {
 
 	// 获取总流量统计
 	var result struct {
-		TotalSent int64
-		TotalRecv int64
+		TotalSent *int64 `json:"total_sent"`
+		TotalRecv *int64 `json:"total_recv"`
 	}
-	database.DB.Model(&database.TrafficLog{}).
-		Select("SUM(bytes_sent) as total_sent, SUM(bytes_recv) as total_recv").
-		Scan(&result)
-	
-	stats.TotalBytesSent = result.TotalSent
-	stats.TotalBytesRecv = result.TotalRecv
+
+	// 使用事务确保数据一致性
+	tx := database.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	err := tx.Model(&database.TrafficLog{}).
+		Select("COALESCE(SUM(bytes_sent), 0) as total_sent, COALESCE(SUM(bytes_recv), 0) as total_recv").
+		Scan(&result).Error
+
+	if err != nil {
+		logger.Log.Errorf("获取流量统计失败: %v", err)
+		// 即使查询失败，也返回默认值
+		stats.TotalBytesSent = 0
+		stats.TotalBytesRecv = 0
+	} else {
+		// 处理可能为 NULL 的值
+		if result.TotalSent != nil {
+			stats.TotalBytesSent = *result.TotalSent
+		} else {
+			stats.TotalBytesSent = 0
+		}
+
+		if result.TotalRecv != nil {
+			stats.TotalBytesRecv = *result.TotalRecv
+		} else {
+			stats.TotalBytesRecv = 0
+		}
+	}
 
 	// 获取活跃连接数
 	var activeSessions int64
-	database.DB.Model(&database.ProxySession{}).
+	if err := tx.Model(&database.ProxySession{}).
 		Where("status = ?", "active").
-		Count(&activeSessions)
-	stats.ActiveConnections = int(activeSessions)
+		Count(&activeSessions).Error; err != nil {
+		logger.Log.Errorf("获取活跃连接数失败: %v", err)
+		stats.ActiveConnections = 0
+	} else {
+		stats.ActiveConnections = int(activeSessions)
+	}
 
 	// 获取总用户数
 	var totalUsers int64
-	database.DB.Model(&database.User{}).Count(&totalUsers)
-	stats.TotalUsers = totalUsers
+	if err := tx.Model(&database.User{}).Count(&totalUsers).Error; err != nil {
+		logger.Log.Errorf("获取总用户数失败: %v", err)
+		stats.TotalUsers = 0
+	} else {
+		stats.TotalUsers = totalUsers
+	}
 
 	// 获取在线用户数
 	var onlineUsers int64
-	database.DB.Model(&database.ProxySession{}).
+	if err := tx.Model(&database.ProxySession{}).
 		Where("status = ?", "active").
 		Distinct("user_id").
-		Count(&onlineUsers)
-	stats.OnlineUsers = int(onlineUsers)
+		Count(&onlineUsers).Error; err != nil {
+		logger.Log.Errorf("获取在线用户数失败: %v", err)
+		stats.OnlineUsers = 0
+	} else {
+		stats.OnlineUsers = int(onlineUsers)
+	}
+
+	tx.Commit()
 
 	c.JSON(http.StatusOK, gin.H{"stats": stats})
 }

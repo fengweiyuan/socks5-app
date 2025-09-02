@@ -17,6 +17,14 @@
         >
           手动刷新
         </el-button>
+        <el-button 
+          @click="cleanupHeartbeats"
+          :loading="cleanupLoading"
+          :icon="Delete"
+          type="warning"
+        >
+          清理过期心跳
+        </el-button>
       </div>
     </div>
 
@@ -26,6 +34,16 @@
       :title="`代理服务状态: ${healthData.status.toUpperCase()}`"
       :description="healthData.message"
       :type="getAlertType(healthData.status)"
+      show-icon
+      style="margin-bottom: 16px"
+    />
+
+    <!-- 心跳超时说明 -->
+    <el-alert
+      v-if="healthData"
+      title="心跳监控说明"
+      description="系统每5秒检查一次代理服务器心跳，超过15秒未收到心跳的服务器将被标记为离线状态"
+      type="info"
       show-icon
       style="margin-bottom: 16px"
     />
@@ -152,12 +170,20 @@
         <el-table-column label="最后心跳">
           <template #default="{ row }">
             <el-tooltip :content="formatDateTime(row.last_heartbeat)">
-              {{ formatTime(row.last_heartbeat) }}
+              {{ formatDateTime(row.last_heartbeat) }}
             </el-tooltip>
           </template>
         </el-table-column>
         
-        <el-table-column label="健康状态" prop="health_message" />
+        <el-table-column label="健康状态" prop="health_message">
+          <template #default="{ row }">
+            <el-tooltip :content="getHealthTooltip(row)">
+              <span :class="{ 'text-warning': !row.is_healthy }">
+                {{ row.health_message }}
+              </span>
+            </el-tooltip>
+          </template>
+        </el-table-column>
       </el-table>
     </el-card>
   </div>
@@ -165,7 +191,6 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import axios from 'axios'
 import { 
   Clock, 
   Refresh, 
@@ -174,25 +199,45 @@ import {
   CircleCloseFilled, 
   Connection,
   CircleCheckFilled,
-  WarningFilled
+  WarningFilled,
+  Delete
 } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { useAuthStore } from '@/stores/auth'
+import { formatTime, formatDateTime } from '@/utils/formatters'
+import api from '@/api/auth'
 
 const healthData = ref(null)
 const loading = ref(true)
 const error = ref(null)
 const autoRefresh = ref(true)
+const cleanupLoading = ref(false)
 let refreshInterval = null
 
 const fetchHealthData = async () => {
   try {
     loading.value = true
-    const response = await axios.get('/api/v1/proxy/health')
-    healthData.value = response.data
+    const response = await api.get('/proxy/health')
+    healthData.value = response
     error.value = null
   } catch (err) {
     error.value = err.response?.data?.error || '获取健康状态失败'
   } finally {
     loading.value = false
+  }
+}
+
+const cleanupHeartbeats = async () => {
+  try {
+    cleanupLoading.value = true
+    await api.post('/proxy/cleanup')
+    ElMessage.success('过期心跳记录清理完成')
+    // 清理完成后刷新数据
+    await fetchHealthData()
+  } catch (err) {
+    ElMessage.error(err.response?.data?.error || '清理心跳记录失败')
+  } finally {
+    cleanupLoading.value = false
   }
 }
 
@@ -266,12 +311,15 @@ const getStatusText = (status, isHealthy) => {
   }
 }
 
-const formatTime = (dateString) => {
-  return new Date(dateString).toLocaleTimeString()
-}
-
-const formatDateTime = (dateString) => {
-  return new Date(dateString).toLocaleString()
+const getHealthTooltip = (row) => {
+  if (row.is_healthy) {
+    return `最后心跳时间: ${formatDateTime(row.last_heartbeat)}`
+  } else {
+    const now = new Date()
+    const lastHeartbeat = new Date(row.last_heartbeat)
+    const diffSeconds = Math.floor((now - lastHeartbeat) / 1000)
+    return `最后心跳时间: ${formatDateTime(row.last_heartbeat)}\n已超时: ${diffSeconds} 秒`
+  }
 }
 
 onMounted(() => {
@@ -309,5 +357,22 @@ code {
   border-radius: 4px;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 12px;
+}
+
+.text-warning {
+  color: #e6a23c;
+  font-weight: 500;
+}
+
+.proxy-health .el-table .el-table__row:hover {
+  background-color: #f5f7fa;
+}
+
+.proxy-health .el-table .el-table__row.offline {
+  background-color: #fef0f0;
+}
+
+.proxy-health .el-table .el-table__row.healthy {
+  background-color: #f0f9ff;
 }
 </style>

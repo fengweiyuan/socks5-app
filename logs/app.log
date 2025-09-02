@@ -85,3 +85,74 @@
 {"level":"error","msg":"数据库表迁移失败: Error 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists","time":"2025-09-03T01:11:59+08:00"}
 {"level":"warning","msg":"数据库表迁移失败，某些功能可能不可用","time":"2025-09-03T01:11:59+08:00"}
 {"level":"info","msg":"API服务器启动成功，监听地址: 0.0.0.0:8012","time":"2025-09-03T01:11:59+08:00"}
+{"level":"info","msg":"数据库连接成功","time":"2025-09-03T02:03:31+08:00"}
+{"level":"error","msg":"数据库表迁移失败: Error 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists","time":"2025-09-03T02:03:31+08:00"}
+{"level":"warning","msg":"数据库表迁移失败，某些功能可能不可用","time":"2025-09-03T02:03:31+08:00"}
+{"level":"info","msg":"API服务器启动成功，监听地址: 0.0.0.0:8012","time":"2025-09-03T02:03:31+08:00"}
+{"level":"info","msg":"数据库连接成功","time":"2025-09-03T02:03:33+08:00"}
+{"level":"error","msg":"数据库表迁移失败: Error 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists","time":"2025-09-03T02:03:33+08:00"}
+{"level":"warning","msg":"数据库表迁移失败，某些功能可能不可用","time":"2025-09-03T02:03:33+08:00"}
+{"level":"info","msg":"SOCKS5服务器启动成功，监听地址: 0.0.0.0:1080","time":"2025-09-03T02:03:33+08:00"}
+{"level":"info","msg":"启动心跳服务，间隔: 5s","time":"2025-09-03T02:03:33+08:00"}
+{"level":"info","msg":"数据库连接成功","time":"2025-09-03T02:11:40+08:00"}
+{"level":"error","msg":"数据库表迁移失败: Error 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists","time":"2025-09-03T02:11:40+08:00"}
+{"level":"warning","msg":"数据库表迁移失败，某些功能可能不可用","time":"2025-09-03T02:11:40+08:00"}
+{"level":"info","msg":"API服务器启动成功，监听地址: 0.0.0.0:8012","time":"2025-09-03T02:11:40+08:00"}
+{"level":"info","msg":"数据库连接成功","time":"2025-09-03T02:11:43+08:00"}
+{"level":"error","msg":"数据库表迁移失败: Error 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists","time":"2025-09-03T02:11:43+08:00"}
+{"level":"warning","msg":"数据库表迁移失败，某些功能可能不可用","time":"2025-09-03T02:11:43+08:00"}
+{"level":"info","msg":"数据库连接成功","time":"2025-09-03T02:12:21+08:00"}
+{"level":"error","msg":"数据库表迁移失败: Error 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists","time":"2025-09-03T02:12:21+08:00"}
+{"level":"warning","msg":"数据库表迁移失败，某些功能可能不可用","time":"2025-09-03T02:12:21+08:00"}
+{"level":"info","msg":"API服务器启动成功，监听地址: 0.0.0.0:8013","time":"2025-09-03T02:12:21+08:00"}
+{"level":"info","msg":"数据库连接成功","time":"2025-09-03T02:12:24+08:00"}
+{"level":"error","msg":"数据库表迁移失败: Error 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists","time":"2025-09-03T02:12:24+08:00"}
+{"level":"warning","msg":"数据库表迁移失败，某些功能可能不可用","time":"2025-09-03T02:12:24+08:00"}
+{"level":"info","msg":"SOCKS5服务器启动成功，监听地址: 0.0.0.0:1081","time":"2025-09-03T02:12:24+08:00"}
+{"level":"info","msg":"启动心跳服务，间隔: 5s","time":"2025-09-03T02:12:24+08:00"}
+{"level":"info","msg":"数据库连接成功","time":"2025-09-03T02:15:07+08:00"}
+{"level":"error","msg":"数据库表迁移失败: Error 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists","time":"2025-09-03T02:15:07+08:00"}
+{"level":"warning","msg":"数据库表迁移失败，某些功能可能不可用","time":"2025-09-03T02:15:07+08:00"}
+{"level":"info","msg":"API服务器启动成功，监听地址: 0.0.0.0:8014","time":"2025-09-03T02:15:07+08:00"}
+{"level":"info","msg":"数据库连接成功","time":"2025-09-03T02:15:10+08:00"}
+{"level":"error","msg":"数据库表迁移失败: Error 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists","time":"2025-09-03T02:15:10+08:00"}
+{"level":"warning","msg":"数据库表迁移失败，某些功能可能不可用","time":"2025-09-03T02:15:10+08:00"}
+{"level":"info","msg":"SOCKS5服务器启动成功，监听地址: 0.0.0.0:1082","time":"2025-09-03T02:15:10+08:00"}
+{"level":"info","msg":"启动心跳服务，间隔: 5s","time":"2025-09-03T02:15:10+08:00"}
+{"level":"info","msg":"数据库连接成功","time":"2025-09-03T02:23:26+08:00"}
+{"level":"error","msg":"数据库表迁移失败: Error 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists","time":"2025-09-03T02:23:26+08:00"}
+{"level":"warning","msg":"数据库表迁移失败，某些功能可能不可用","time":"2025-09-03T02:23:26+08:00"}
+{"level":"info","msg":"API服务器启动成功，监听地址: 0.0.0.0:8014","time":"2025-09-03T02:23:26+08:00"}
+{"level":"info","msg":"数据库连接成功","time":"2025-09-03T02:23:27+08:00"}
+{"level":"error","msg":"数据库表迁移失败: Error 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists","time":"2025-09-03T02:23:27+08:00"}
+{"level":"warning","msg":"数据库表迁移失败，某些功能可能不可用","time":"2025-09-03T02:23:27+08:00"}
+{"level":"info","msg":"数据库连接成功","time":"2025-09-03T02:25:50+08:00"}
+{"level":"error","msg":"数据库表迁移失败: Error 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists","time":"2025-09-03T02:25:50+08:00"}
+{"level":"warning","msg":"数据库表迁移失败，某些功能可能不可用","time":"2025-09-03T02:25:50+08:00"}
+{"level":"info","msg":"API服务器启动成功，监听地址: 0.0.0.0:8012","time":"2025-09-03T02:25:50+08:00"}
+{"level":"info","msg":"数据库连接成功","time":"2025-09-03T02:25:58+08:00"}
+{"level":"error","msg":"数据库表迁移失败: Error 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists","time":"2025-09-03T02:25:58+08:00"}
+{"level":"warning","msg":"数据库表迁移失败，某些功能可能不可用","time":"2025-09-03T02:25:58+08:00"}
+{"level":"info","msg":"数据库连接成功","time":"2025-09-03T02:26:51+08:00"}
+{"level":"error","msg":"数据库表迁移失败: Error 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists","time":"2025-09-03T02:26:51+08:00"}
+{"level":"warning","msg":"数据库表迁移失败，某些功能可能不可用","time":"2025-09-03T02:26:51+08:00"}
+{"level":"info","msg":"API服务器启动成功，监听地址: 0.0.0.0:8012","time":"2025-09-03T02:26:51+08:00"}
+{"level":"info","msg":"数据库连接成功","time":"2025-09-03T02:27:00+08:00"}
+{"level":"error","msg":"数据库表迁移失败: Error 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists","time":"2025-09-03T02:27:00+08:00"}
+{"level":"warning","msg":"数据库表迁移失败，某些功能可能不可用","time":"2025-09-03T02:27:00+08:00"}
+{"level":"info","msg":"数据库连接成功","time":"2025-09-03T02:27:17+08:00"}
+{"level":"error","msg":"数据库表迁移失败: Error 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists","time":"2025-09-03T02:27:17+08:00"}
+{"level":"warning","msg":"数据库表迁移失败，某些功能可能不可用","time":"2025-09-03T02:27:17+08:00"}
+{"level":"info","msg":"API服务器启动成功，监听地址: 0.0.0.0:8012","time":"2025-09-03T02:27:17+08:00"}
+{"level":"info","msg":"数据库连接成功","time":"2025-09-03T02:27:30+08:00"}
+{"level":"error","msg":"数据库表迁移失败: Error 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists","time":"2025-09-03T02:27:30+08:00"}
+{"level":"warning","msg":"数据库表迁移失败，某些功能可能不可用","time":"2025-09-03T02:27:30+08:00"}
+{"level":"info","msg":"数据库连接成功","time":"2025-09-03T02:27:56+08:00"}
+{"level":"error","msg":"数据库表迁移失败: Error 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists","time":"2025-09-03T02:27:56+08:00"}
+{"level":"warning","msg":"数据库表迁移失败，某些功能可能不可用","time":"2025-09-03T02:27:56+08:00"}
+{"level":"info","msg":"SOCKS5服务器启动成功，监听地址: 0.0.0.0:1082","time":"2025-09-03T02:27:56+08:00"}
+{"level":"info","msg":"启动心跳服务，间隔: 5s","time":"2025-09-03T02:27:56+08:00"}
+{"level":"info","msg":"数据库连接成功","time":"2025-09-03T02:31:39+08:00"}
+{"level":"error","msg":"数据库表迁移失败: Error 1091 (42000): Can't DROP 'uni_users_username'; check that column/key exists","time":"2025-09-03T02:31:39+08:00"}
+{"level":"warning","msg":"数据库表迁移失败，某些功能可能不可用","time":"2025-09-03T02:31:39+08:00"}
+{"level":"info","msg":"API服务器启动成功，监听地址: 0.0.0.0:8012","time":"2025-09-03T02:31:39+08:00"}

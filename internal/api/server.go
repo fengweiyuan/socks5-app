@@ -3,10 +3,11 @@ package api
 import (
 	"fmt"
 
-	"github.com/gin-gonic/gin"
 	"socks5-app/internal/config"
 	"socks5-app/internal/logger"
 	"socks5-app/internal/middleware"
+
+	"github.com/gin-gonic/gin"
 )
 
 type Server struct {
@@ -112,6 +113,7 @@ func (s *Server) setupRoutes() {
 				proxy.GET("/health", s.handleGetProxyHealth)
 				proxy.GET("/heartbeat", s.handleGetHeartbeatRecords)
 				proxy.GET("/status", s.handleGetProxyStatus)
+				proxy.POST("/cleanup", middleware.AdminMiddleware(), s.handleCleanupHeartbeats)
 			}
 		}
 	}
