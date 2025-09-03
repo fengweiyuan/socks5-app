@@ -5,6 +5,7 @@ proxy
 
 # Logs
 logs/
+logs/*
 *.log
 *.pid
 
