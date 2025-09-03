@@ -37,9 +37,11 @@ CREATE TABLE IF NOT EXISTS proxy_sessions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_user_id (user_id),
-    INDEX idx_status (status),
-    INDEX idx_start_time (start_time)
+    -- 优化后的复合索引，提升查询性能
+    INDEX idx_user_status_time (user_id, status, start_time DESC),
+    INDEX idx_status_start_time (status, start_time DESC),
+    INDEX idx_client_start_time (client_ip, start_time DESC),
+    INDEX idx_time_range (start_time, end_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 创建流量日志表
@@ -55,9 +57,11 @@ CREATE TABLE IF NOT EXISTS traffic_logs (
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_user_id (user_id),
-    INDEX idx_timestamp (timestamp),
-    INDEX idx_target_ip (target_ip)
+    -- 优化后的复合索引，提升查询性能
+    INDEX idx_user_timestamp (user_id, timestamp DESC),
+    INDEX idx_timestamp_user (timestamp DESC, user_id),
+    INDEX idx_target_analysis (target_ip, target_port, protocol),
+    INDEX idx_client_timestamp (client_ip, timestamp DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 创建访问日志表
@@ -72,9 +76,12 @@ CREATE TABLE IF NOT EXISTS access_logs (
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_user_id (user_id),
-    INDEX idx_timestamp (timestamp),
-    INDEX idx_status (status)
+    -- 优化后的复合索引，提升查询性能
+    INDEX idx_user_timestamp (user_id, timestamp DESC),
+    INDEX idx_timestamp_status (timestamp DESC, status),
+    INDEX idx_client_timestamp (client_ip, timestamp DESC),
+    INDEX idx_status_timestamp (status, timestamp DESC),
+    INDEX idx_target_url_prefix (target_url(100), timestamp DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 创建URL过滤规则表
@@ -129,9 +136,10 @@ CREATE TABLE IF NOT EXISTS proxy_heartbeats (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY unique_proxy_id (proxy_id),
-    INDEX idx_proxy_id (proxy_id),
-    INDEX idx_status (status),
-    INDEX idx_last_heartbeat (last_heartbeat)
+    -- 优化后的复合索引，提升查询性能
+    INDEX idx_proxy_heartbeat (proxy_id, last_heartbeat DESC),
+    INDEX idx_status_heartbeat (status, last_heartbeat DESC),
+    INDEX idx_heartbeat_status (last_heartbeat DESC, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 插入默认管理员用户（密码为 'password' 的bcrypt哈希）
@@ -148,3 +156,101 @@ INSERT IGNORE INTO url_filters (pattern, type, description) VALUES
 INSERT IGNORE INTO ip_whitelists (ip, description) VALUES 
 ('192.168.1.0/24', '内网IP段'),
 ('10.0.0.0/8', '私有网络IP段');
+
+-- ============================================================================
+-- 创建性能优化视图，提升复杂查询性能
+-- ============================================================================
+
+-- 创建用户流量统计视图
+CREATE OR REPLACE VIEW user_traffic_summary AS
+SELECT 
+    u.id,
+    u.username,
+    u.role,
+    COUNT(DISTINCT tl.id) as total_requests,
+    SUM(tl.bytes_sent) as total_bytes_sent,
+    SUM(tl.bytes_recv) as total_bytes_recv,
+    COUNT(DISTINCT DATE(tl.timestamp)) as active_days,
+    MAX(tl.timestamp) as last_activity
+FROM users u
+LEFT JOIN traffic_logs tl ON u.id = tl.user_id
+WHERE u.deleted_at IS NULL
+GROUP BY u.id, u.username, u.role;
+
+-- 创建代理健康状态视图
+CREATE OR REPLACE VIEW proxy_health_summary AS
+SELECT 
+    proxy_id,
+    proxy_host,
+    proxy_port,
+    status,
+    active_conns,
+    total_conns,
+    last_heartbeat,
+    CASE 
+        WHEN TIMESTAMPDIFF(SECOND, last_heartbeat, NOW()) <= 15 THEN 'healthy'
+        WHEN TIMESTAMPDIFF(SECOND, last_heartbeat, NOW()) <= 30 THEN 'warning'
+        ELSE 'offline'
+    END as health_status
+FROM proxy_heartbeats
+ORDER BY last_heartbeat DESC;
+
+-- 创建系统性能监控视图
+CREATE OR REPLACE VIEW system_performance_summary AS
+SELECT 
+    'traffic_logs' as table_name,
+    COUNT(*) as total_records,
+    MIN(timestamp) as earliest_record,
+    MAX(timestamp) as latest_record
+FROM traffic_logs
+UNION ALL
+SELECT 
+    'access_logs' as table_name,
+    COUNT(*) as total_records,
+    MIN(timestamp) as earliest_record,
+    MAX(timestamp) as latest_record
+FROM access_logs
+UNION ALL
+SELECT 
+    'proxy_sessions' as table_name,
+    COUNT(*) as total_records,
+    MIN(created_at) as earliest_record,
+    MAX(created_at) as latest_record
+FROM proxy_sessions;
+
+-- ============================================================================
+-- 索引优化说明
+-- ============================================================================
+-- 
+-- 本脚本已包含针对流水表的优化索引设计：
+-- 
+-- 1. traffic_logs表：
+--    - idx_user_timestamp: 用户ID + 时间戳（最常用查询）
+--    - idx_timestamp_user: 时间戳 + 用户ID（时间范围查询）
+--    - idx_target_analysis: 目标IP + 端口 + 协议（目标分析）
+--    - idx_client_timestamp: 客户端IP + 时间戳（客户端行为分析）
+-- 
+-- 2. access_logs表：
+--    - idx_user_timestamp: 用户ID + 时间戳（用户访问记录）
+--    - idx_timestamp_status: 时间戳 + 状态（时间范围状态查询）
+--    - idx_client_timestamp: 客户端IP + 时间戳（客户端行为分析）
+--    - idx_status_timestamp: 状态 + 时间戳（状态统计查询）
+--    - idx_target_url_prefix: URL前缀 + 时间戳（URL模式查询）
+-- 
+-- 3. proxy_sessions表：
+--    - idx_user_status_time: 用户ID + 状态 + 开始时间（用户活跃会话）
+--    - idx_status_start_time: 状态 + 开始时间（状态统计查询）
+--    - idx_client_start_time: 客户端IP + 开始时间（客户端会话查询）
+--    - idx_time_range: 开始时间 + 结束时间（时间范围查询）
+-- 
+-- 4. proxy_heartbeats表：
+--    - idx_proxy_heartbeat: 代理ID + 最后心跳时间（健康状态查询）
+--    - idx_status_heartbeat: 状态 + 最后心跳时间（状态监控查询）
+--    - idx_heartbeat_status: 最后心跳时间 + 状态（时间范围状态查询）
+-- 
+-- 这些索引设计基于以下查询模式优化：
+-- - 按用户查询特定时间段的数据
+-- - 按时间范围查询统计数据
+-- - 按客户端IP分析行为模式
+-- - 按状态和时间进行统计查询
+-- - 支持高效的范围查询和排序操作

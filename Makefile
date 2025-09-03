@@ -32,14 +32,26 @@ dev: ## 启动开发模式
 # 启动服务
 start: ## 启动所有服务
 	@echo "启动SOCKS5代理服务器..."
-	@chmod +x scripts/start.sh
-	@./scripts/start.sh
+	@chmod +x scripts/service.sh
+	@./scripts/service.sh start
 
 # 停止服务
 stop: ## 停止所有服务
 	@echo "停止SOCKS5代理服务器..."
-	@chmod +x scripts/stop.sh
-	@./scripts/stop.sh
+	@chmod +x scripts/service.sh
+	@./scripts/service.sh stop
+
+# 重启服务
+restart: ## 重启所有服务
+	@echo "重启SOCKS5代理服务器..."
+	@chmod +x scripts/service.sh
+	@./scripts/service.sh restart
+
+# 查看服务状态
+status: ## 查看服务状态
+	@echo "查看SOCKS5代理服务器状态..."
+	@chmod +x scripts/service.sh
+	@./scripts/service.sh status
 
 # 清理构建文件
 clean: ## 清理构建文件
