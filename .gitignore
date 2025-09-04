@@ -18,3 +18,4 @@ data/
 
 # Environment
 .env
+bin/*

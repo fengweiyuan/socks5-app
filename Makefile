@@ -1,4 +1,4 @@
-.PHONY: build clean start stop dev test help db-test db-init
+.PHONY: build clean start stop dev test help db-test db-init build-linux dist-linux
 
 # 默认目标
 .DEFAULT_GOAL := help
@@ -6,6 +6,7 @@
 # 变量定义
 BINARY_DIR=bin
 DIST_DIR=dist
+DIST_LINUX_DIR=dist_linux
 CONFIG_DIR=configs
 WEB_DIR=web
 
@@ -20,6 +21,18 @@ build: ## 构建整个项目
 	@echo "构建前端应用..."
 	@cd $(WEB_DIR) && npm install && npm run build
 	@echo "构建完成！"
+
+# 构建Linux版本（CentOS兼容）
+build-linux: ## 构建Linux版本（CentOS兼容）
+	@echo "开始构建Linux版本的SOCKS5代理服务器..."
+	@mkdir -p $(BINARY_DIR)
+	@mkdir -p logs
+	@echo "构建后端服务（Linux版本）..."
+	@GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o $(BINARY_DIR)/server cmd/server/main.go
+	@GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o $(BINARY_DIR)/proxy cmd/proxy/main.go
+	@echo "构建前端应用..."
+	@cd $(WEB_DIR) && npm install && npm run build
+	@echo "Linux版本构建完成！"
 
 # 开发模式
 dev: ## 启动开发模式
@@ -58,6 +71,7 @@ clean: ## 清理构建文件
 	@echo "清理构建文件..."
 	@rm -rf $(BINARY_DIR)
 	@rm -rf $(DIST_DIR)
+	@rm -rf $(DIST_LINUX_DIR)
 	@rm -rf $(WEB_DIR)/build
 	@rm -rf $(WEB_DIR)/node_modules
 	@echo "清理完成！"
@@ -100,6 +114,17 @@ dist: build ## 创建发布包
 	@cp -r scripts $(DIST_DIR)/
 	@cp README.md $(DIST_DIR)/
 	@echo "发布包创建完成！位于: $(DIST_DIR)/"
+
+# 创建Linux发布包
+dist-linux: build-linux ## 创建Linux发布包
+	@echo "创建Linux发布包..."
+	@mkdir -p $(DIST_LINUX_DIR)
+	@cp -r $(BINARY_DIR) $(DIST_LINUX_DIR)/
+	@cp -r $(CONFIG_DIR) $(DIST_LINUX_DIR)/
+	@cp -r $(WEB_DIR)/build $(DIST_LINUX_DIR)/web/
+	@cp -r scripts $(DIST_LINUX_DIR)/
+	@cp README.md $(DIST_LINUX_DIR)/
+	@echo "Linux发布包创建完成！位于: $(DIST_LINUX_DIR)/"
 
 # 帮助信息
 help: ## 显示帮助信息
