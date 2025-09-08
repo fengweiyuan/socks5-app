@@ -31,13 +31,8 @@ const router = createRouter({
         },
         {
           path: 'traffic',
-          name: 'Traffic',
-          component: () => import('@/views/Traffic.vue')
-        },
-        {
-          path: 'traffic-control',
-          name: 'TrafficControl',
-          component: () => import('@/views/TrafficControl.vue')
+          name: 'TrafficManagement',
+          component: () => import('@/views/TrafficManagement.vue')
         },
         {
           path: 'logs',

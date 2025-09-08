@@ -180,7 +180,7 @@ stop_services() {
         if kill -0 $PROXY_PID 2>/dev/null; then
             echo -e "${BLUE}停止代理服务器 (PID: $PROXY_PID)...${NC}"
             kill $PROXY_PID
-            rm -f logs/server.pid
+            rm -f logs/proxy.pid
             echo -e "${GREEN}代理服务器已停止${NC}"
         else
             echo -e "${YELLOW}代理服务器进程不存在${NC}"

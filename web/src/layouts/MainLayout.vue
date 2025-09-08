@@ -25,12 +25,7 @@
         
         <el-menu-item index="/traffic">
           <el-icon><TrendCharts /></el-icon>
-          <template #title>流量监控</template>
-        </el-menu-item>
-        
-        <el-menu-item index="/traffic-control">
-          <el-icon><Setting /></el-icon>
-          <template #title>流量控制</template>
+          <template #title>流量管理</template>
         </el-menu-item>
         
         <el-menu-item index="/logs">

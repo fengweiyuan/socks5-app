@@ -106,23 +106,25 @@ func (s *Server) setupRoutes() {
 				users.DELETE("/:id", middleware.AdminMiddleware(), s.handleDeleteUser)
 			}
 
-			// 流量管理
-			traffic := authenticated.Group("/traffic")
-			{
-				traffic.GET("", s.handleGetTrafficStats)
-				traffic.GET("/realtime", s.handleGetRealtimeTraffic)
-				traffic.POST("/limit", middleware.AdminMiddleware(), s.handleSetBandwidthLimit)
-				traffic.GET("/limits", middleware.AdminMiddleware(), s.handleGetBandwidthLimits)
-				traffic.PUT("/limits/:user_id", middleware.AdminMiddleware(), s.handleUpdateBandwidthLimit)
-				traffic.DELETE("/limits/:user_id", middleware.AdminMiddleware(), s.handleDeleteBandwidthLimit)
-			}
-
 			// 日志管理
 			logs := authenticated.Group("/logs")
 			{
 				logs.GET("", s.handleGetLogs)
 				logs.GET("/export", s.handleExportLogs)
 				logs.DELETE("", middleware.AdminMiddleware(), s.handleClearLogs)
+			}
+
+			// 流量管理
+			traffic := authenticated.Group("/traffic")
+			{
+				traffic.GET("", s.handleGetTrafficStats)
+				traffic.GET("/realtime", s.handleGetRealtimeTraffic)
+				traffic.GET("/historical", s.handleGetHistoricalTraffic)
+				traffic.GET("/logs", s.handleGetLogs)
+				traffic.POST("/limit", middleware.AdminMiddleware(), s.handleSetBandwidthLimit)
+				traffic.GET("/limits", middleware.AdminMiddleware(), s.handleGetBandwidthLimits)
+				traffic.PUT("/limits/:user_id", middleware.AdminMiddleware(), s.handleUpdateBandwidthLimit)
+				traffic.DELETE("/limits/:user_id", middleware.AdminMiddleware(), s.handleDeleteBandwidthLimit)
 			}
 
 			// 在线用户

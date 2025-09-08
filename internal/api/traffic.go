@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
@@ -116,14 +117,21 @@ func (s *Server) handleGetRealtimeTraffic(c *gin.Context) {
 	oneHourAgo := now.Add(-1 * time.Hour)
 
 	var logs []database.TrafficLog
-	database.DB.Where("timestamp >= ?", oneHourAgo).
+	database.DB.Preload("User").Where("timestamp >= ?", oneHourAgo).
 		Order("timestamp ASC").
 		Find(&logs)
 
+	logger.Log.Infof("获取到 %d 条流量日志记录", len(logs))
+
 	// 按分钟聚合数据
 	trafficMap := make(map[string]*RealtimeTraffic)
+	userTrafficMap := make(map[string]map[string]*RealtimeTraffic) // username -> time -> traffic
+
 	for _, log := range logs {
 		key := log.Timestamp.Format("2006-01-02 15:04")
+		username := log.User.Username
+
+		// 总体流量聚合
 		if traffic, exists := trafficMap[key]; exists {
 			traffic.BytesSent += log.BytesSent
 			traffic.BytesRecv += log.BytesRecv
@@ -134,6 +142,23 @@ func (s *Server) handleGetRealtimeTraffic(c *gin.Context) {
 				BytesRecv: log.BytesRecv,
 			}
 		}
+
+		// 按用户聚合流量
+		if username != "" { // 确保用户名不为空
+			if userTrafficMap[username] == nil {
+				userTrafficMap[username] = make(map[string]*RealtimeTraffic)
+			}
+			if traffic, exists := userTrafficMap[username][key]; exists {
+				traffic.BytesSent += log.BytesSent
+				traffic.BytesRecv += log.BytesRecv
+			} else {
+				userTrafficMap[username][key] = &RealtimeTraffic{
+					Timestamp: log.Timestamp,
+					BytesSent: log.BytesSent,
+					BytesRecv: log.BytesRecv,
+				}
+			}
+		}
 	}
 
 	// 转换为数组
@@ -142,7 +167,132 @@ func (s *Server) handleGetRealtimeTraffic(c *gin.Context) {
 		realtimeData = append(realtimeData, traffic)
 	}
 
-	c.JSON(http.StatusOK, gin.H{"realtime_traffic": realtimeData})
+	// 按用户聚合数据，获取 TOP 10 用户
+	type UserTrafficSummary struct {
+		Username  string             `json:"username"`
+		TotalSent int64              `json:"total_sent"`
+		TotalRecv int64              `json:"total_recv"`
+		Traffic   []*RealtimeTraffic `json:"traffic"`
+	}
+
+	var userSummaries []UserTrafficSummary
+	for username, userTraffic := range userTrafficMap {
+		var totalSent, totalRecv int64
+		var userTrafficData []*RealtimeTraffic
+
+		for _, traffic := range userTraffic {
+			totalSent += traffic.BytesSent
+			totalRecv += traffic.BytesRecv
+			userTrafficData = append(userTrafficData, traffic)
+		}
+
+		userSummaries = append(userSummaries, UserTrafficSummary{
+			Username:  username,
+			TotalSent: totalSent,
+			TotalRecv: totalRecv,
+			Traffic:   userTrafficData,
+		})
+	}
+
+	// 按总流量排序，取 TOP 10
+	sort.Slice(userSummaries, func(i, j int) bool {
+		return (userSummaries[i].TotalSent + userSummaries[i].TotalRecv) >
+			(userSummaries[j].TotalSent + userSummaries[j].TotalRecv)
+	})
+
+	if len(userSummaries) > 10 {
+		userSummaries = userSummaries[:10]
+	}
+
+	logger.Log.Infof("返回数据: 总体数据点 %d, 用户数据 %d", len(realtimeData), len(userSummaries))
+
+	c.JSON(http.StatusOK, gin.H{
+		"realtime_traffic": realtimeData,
+		"user_traffic":     userSummaries,
+	})
+}
+
+// handleGetHistoricalTraffic 获取历史流量数据
+func (s *Server) handleGetHistoricalTraffic(c *gin.Context) {
+	// 获取查询参数
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	username := c.Query("username")
+	startDate := c.Query("startDate")
+	endDate := c.Query("endDate")
+	targetIP := c.Query("targetIP")
+	sortBy := c.DefaultQuery("sortBy", "timestamp")
+	sortOrder := c.DefaultQuery("sortOrder", "desc")
+
+	offset := (page - 1) * pageSize
+
+	// 构建查询
+	query := database.DB.Model(&database.TrafficLog{}).Preload("User")
+
+	// 应用过滤条件
+	if username != "" {
+		query = query.Joins("JOIN users ON traffic_logs.user_id = users.id").
+			Where("users.username LIKE ?", "%"+username+"%")
+	}
+	if startDate != "" && endDate != "" {
+		query = query.Where("timestamp BETWEEN ? AND ?", startDate, endDate)
+	}
+	if targetIP != "" {
+		query = query.Where("target_ip LIKE ?", "%"+targetIP+"%")
+	}
+
+	// 获取总数
+	var total int64
+	query.Count(&total)
+
+	// 排序
+	orderClause := sortBy
+	if sortOrder == "desc" {
+		orderClause += " DESC"
+	} else {
+		orderClause += " ASC"
+	}
+
+	// 获取数据
+	var logs []database.TrafficLog
+	if err := query.Offset(offset).Limit(pageSize).
+		Order(orderClause).
+		Find(&logs).Error; err != nil {
+		logger.Log.Errorf("获取历史流量数据失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取历史流量数据失败"})
+		return
+	}
+
+	// 计算统计信息
+	var stats struct {
+		TotalSent int64 `json:"total_sent"`
+		TotalRecv int64 `json:"total_recv"`
+		AvgSent   int64 `json:"avg_sent"`
+		AvgRecv   int64 `json:"avg_recv"`
+	}
+
+	statsQuery := database.DB.Model(&database.TrafficLog{})
+	if username != "" {
+		statsQuery = statsQuery.Joins("JOIN users ON traffic_logs.user_id = users.id").
+			Where("users.username LIKE ?", "%"+username+"%")
+	}
+	if startDate != "" && endDate != "" {
+		statsQuery = statsQuery.Where("timestamp BETWEEN ? AND ?", startDate, endDate)
+	}
+	if targetIP != "" {
+		statsQuery = statsQuery.Where("target_ip LIKE ?", "%"+targetIP+"%")
+	}
+
+	statsQuery.Select("COALESCE(SUM(bytes_sent), 0) as total_sent, COALESCE(SUM(bytes_recv), 0) as total_recv, COALESCE(AVG(bytes_sent), 0) as avg_sent, COALESCE(AVG(bytes_recv), 0) as avg_recv").
+		Scan(&stats)
+
+	c.JSON(http.StatusOK, gin.H{
+		"logs":     logs,
+		"total":    total,
+		"page":     page,
+		"pageSize": pageSize,
+		"stats":    stats,
+	})
 }
 
 func (s *Server) handleSetBandwidthLimit(c *gin.Context) {
@@ -322,5 +472,54 @@ func (s *Server) handleDeleteBandwidthLimit(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "带宽限制删除成功",
+	})
+}
+
+// handleGetTrafficLogs 获取流量日志
+func (s *Server) handleGetTrafficLogs(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	username := c.Query("username")
+	startDate := c.Query("startDate")
+	endDate := c.Query("endDate")
+
+	offset := (page - 1) * pageSize
+
+	query := database.DB.Model(&database.TrafficLog{}).Preload("User")
+
+	// 应用过滤条件
+	if username != "" {
+		query = query.Joins("JOIN users ON traffic_logs.user_id = users.id").
+			Where("users.username LIKE ?", "%"+username+"%")
+	}
+	if startDate != "" && endDate != "" {
+		query = query.Where("timestamp BETWEEN ? AND ?", startDate, endDate)
+	}
+
+	var total int64
+	query.Count(&total)
+
+	var logs []database.TrafficLog
+	if err := query.Offset(offset).Limit(pageSize).
+		Order("timestamp DESC").
+		Find(&logs).Error; err != nil {
+		logger.Log.Errorf("获取流量日志失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取流量日志失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"logs":     logs,
+		"total":    total,
+		"page":     page,
+		"pageSize": pageSize,
+	})
+}
+
+// handleGetTrafficLogsTest 测试函数
+func (s *Server) handleGetTrafficLogsTest(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "流量日志测试接口正常工作",
+		"timestamp": time.Now().Format("2006-01-02 15:04:05"),
 	})
 }

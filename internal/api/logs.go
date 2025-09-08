@@ -6,9 +6,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"socks5-app/internal/database"
 	"socks5-app/internal/logger"
+
+	"github.com/gin-gonic/gin"
 )
 
 func (s *Server) handleGetLogs(c *gin.Context) {
@@ -18,9 +19,47 @@ func (s *Server) handleGetLogs(c *gin.Context) {
 	username := c.Query("username")
 	startDate := c.Query("startDate")
 	endDate := c.Query("endDate")
+	logType := c.Query("type")
 
 	offset := (page - 1) * pageSize
 
+	// 检查是否是流量日志请求
+	logger.Log.Infof("处理日志请求: type=%s, path=%s", logType, c.Request.URL.Path)
+	if logType == "traffic" {
+		// 返回流量日志
+		query := database.DB.Model(&database.TrafficLog{}).Preload("User")
+
+		// 应用过滤条件
+		if username != "" {
+			query = query.Joins("JOIN users ON traffic_logs.user_id = users.id").
+				Where("users.username LIKE ?", "%"+username+"%")
+		}
+		if startDate != "" && endDate != "" {
+			query = query.Where("timestamp BETWEEN ? AND ?", startDate, endDate)
+		}
+
+		var total int64
+		query.Count(&total)
+
+		var logs []database.TrafficLog
+		if err := query.Offset(offset).Limit(pageSize).
+			Order("timestamp DESC").
+			Find(&logs).Error; err != nil {
+			logger.Log.Errorf("获取流量日志失败: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "获取流量日志失败"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"logs":     logs,
+			"total":    total,
+			"page":     page,
+			"pageSize": pageSize,
+		})
+		return
+	}
+
+	// 返回访问日志
 	query := database.DB.Model(&database.AccessLog{}).Preload("User")
 
 	// 应用过滤条件
@@ -48,9 +87,9 @@ func (s *Server) handleGetLogs(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"logs": logs,
-		"total": total,
-		"page": page,
+		"logs":     logs,
+		"total":    total,
+		"page":     page,
 		"pageSize": pageSize,
 	})
 }
