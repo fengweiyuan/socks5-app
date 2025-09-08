@@ -190,6 +190,36 @@ stop_services() {
         echo -e "${YELLOW}代理服务器PID文件不存在${NC}"
     fi
     
+    # 清理可能遗留的进程
+    echo -e "${BLUE}清理遗留进程...${NC}"
+    
+    # 查找并停止占用端口8012的进程
+    SERVER_PIDS=$(lsof -ti :8012 2>/dev/null || true)
+    if [ ! -z "$SERVER_PIDS" ]; then
+        echo -e "${YELLOW}发现占用端口8012的进程: $SERVER_PIDS${NC}"
+        for pid in $SERVER_PIDS; do
+            if kill -0 $pid 2>/dev/null; then
+                echo -e "${BLUE}停止进程 (PID: $pid)...${NC}"
+                kill $pid
+            fi
+        done
+    fi
+    
+    # 查找并停止占用端口1082的进程
+    PROXY_PIDS=$(lsof -ti :1082 2>/dev/null || true)
+    if [ ! -z "$PROXY_PIDS" ]; then
+        echo -e "${YELLOW}发现占用端口1082的进程: $PROXY_PIDS${NC}"
+        for pid in $PROXY_PIDS; do
+            if kill -0 $pid 2>/dev/null; then
+                echo -e "${BLUE}停止进程 (PID: $pid)...${NC}"
+                kill $pid
+            fi
+        done
+    fi
+    
+    # 等待进程完全停止
+    sleep 1
+    
     echo -e "${GREEN}所有服务已停止${NC}"
 }
 

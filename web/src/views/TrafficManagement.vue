@@ -6,53 +6,6 @@
       <p>实时流量监控与带宽控制管理</p>
     </div>
 
-    <!-- 流量统计概览 -->
-    <el-row :gutter="20" class="stats-row">
-      <el-col :span="6">
-        <div class="stat-card">
-          <div class="stat-icon">
-            <el-icon><Upload /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ formatBytes(trafficStats.totalBytesSent) }}</div>
-            <div class="stat-label">总发送流量</div>
-          </div>
-        </div>
-      </el-col>
-      <el-col :span="6">
-        <div class="stat-card">
-          <div class="stat-icon">
-            <el-icon><Download /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ formatBytes(trafficStats.totalBytesRecv) }}</div>
-            <div class="stat-label">总接收流量</div>
-          </div>
-        </div>
-      </el-col>
-      <el-col :span="6">
-        <div class="stat-card">
-          <div class="stat-icon">
-            <el-icon><Connection /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ trafficStats.activeConnections }}</div>
-            <div class="stat-label">活跃连接</div>
-          </div>
-        </div>
-      </el-col>
-      <el-col :span="6">
-        <div class="stat-card">
-          <div class="stat-icon">
-            <el-icon><User /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ trafficStats.onlineUsers }}</div>
-            <div class="stat-label">在线用户</div>
-          </div>
-        </div>
-      </el-col>
-    </el-row>
 
     <!-- 实时流量监控图表 -->
     <el-card class="chart-card">
@@ -62,7 +15,6 @@
           <div>
             <el-button 
               @click="toggleAutoRefresh" 
-              :loading="statsLoading"
               :type="isAutoRefresh ? 'success' : 'primary'"
             >
               <el-icon><Refresh /></el-icon>
@@ -401,7 +353,6 @@ const authStore = useAuthStore()
 const loading = ref(false)
 const setting = ref(false)
 const updating = ref(false)
-const statsLoading = ref(false)
 const logsLoading = ref(false)
 const showEditDialog = ref(false)
 
@@ -422,12 +373,6 @@ const editForm = reactive({
 // 数据列表
 const bandwidthLimits = ref([])
 const trafficLogs = ref([])
-const trafficStats = ref({
-  totalBytesSent: 0,
-  totalBytesRecv: 0,
-  activeConnections: 0,
-  onlineUsers: 0
-})
 const realtimeTraffic = ref([])
 const userTraffic = ref([])
 const isAutoRefresh = ref(false)
@@ -555,19 +500,6 @@ const deleteLimit = async (row) => {
   }
 }
 
-// 加载流量统计
-const loadTrafficStats = async () => {
-  statsLoading.value = true
-  try {
-    const result = await trafficControlAPI.getTrafficStats(authStore.token)
-    trafficStats.value = result
-    updateChart()
-  } catch (error) {
-    // 错误已在 API 服务中处理
-  } finally {
-    statsLoading.value = false
-  }
-}
 
 // 获取实时流量数据
 const loadRealtimeTraffic = async () => {
@@ -615,7 +547,6 @@ const toggleAutoRefresh = () => {
   if (isAutoRefresh.value) {
     // 开始自动刷新
     intervalId = setInterval(() => {
-      loadTrafficStats()
       loadRealtimeTraffic()
     }, 10000) // 每10秒更新一次
     ElMessage.success('已开启自动刷新')
@@ -851,10 +782,7 @@ const exportLimits = () => {
 // 导出流量数据
 const exportTrafficData = () => {
   const data = [{
-    '总发送流量': trafficStats.value.totalBytesSent,
-    '总接收流量': trafficStats.value.totalBytesRecv,
-    '活跃连接': trafficStats.value.activeConnections,
-    '在线用户': trafficStats.value.onlineUsers
+    '说明': '流量统计功能已移除'
   }]
   
   utils.exportToCSV(data, 'traffic_stats.csv')
@@ -893,7 +821,6 @@ const editFormRef = ref()
 // 生命周期
 onMounted(() => {
   loadBandwidthLimits()
-  loadTrafficStats()
   loadRealtimeTraffic()
   fetchTrafficLogs()
   
@@ -936,40 +863,6 @@ onUnmounted(() => {
   font-size: 16px;
 }
 
-.stats-row {
-  margin-bottom: 20px;
-}
-
-.stat-card {
-  display: flex;
-  align-items: center;
-  padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 8px;
-  color: white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.stat-icon {
-  font-size: 32px;
-  margin-right: 16px;
-  opacity: 0.8;
-}
-
-.stat-content {
-  flex: 1;
-}
-
-.stat-value {
-  font-size: 24px;
-  font-weight: bold;
-  margin-bottom: 4px;
-}
-
-.stat-label {
-  font-size: 14px;
-  opacity: 0.9;
-}
 
 .chart-card,
 .control-card,
@@ -1019,13 +912,6 @@ onUnmounted(() => {
     font-size: 24px;
   }
   
-  .stat-card {
-    padding: 15px;
-  }
-  
-  .stat-value {
-    font-size: 20px;
-  }
   
   .card-header {
     flex-direction: column;
