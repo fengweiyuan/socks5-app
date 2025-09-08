@@ -35,6 +35,11 @@ const router = createRouter({
           component: () => import('@/views/Traffic.vue')
         },
         {
+          path: 'traffic-control',
+          name: 'TrafficControl',
+          component: () => import('@/views/TrafficControl.vue')
+        },
+        {
           path: 'logs',
           name: 'Logs',
           component: () => import('@/views/Logs.vue')

@@ -31,11 +31,12 @@ type DatabaseConfig struct {
 }
 
 type ProxyConfig struct {
-	Port              string `mapstructure:"port"`
-	Host              string `mapstructure:"host"`
-	Timeout           int    `mapstructure:"timeout"`
-	MaxConns          int    `mapstructure:"max_connections"`
-	HeartbeatInterval int    `mapstructure:"heartbeat_interval"` // 心跳间隔（秒）
+	Port               string `mapstructure:"port"`
+	Host               string `mapstructure:"host"`
+	Timeout            int    `mapstructure:"timeout"`
+	MaxConns           int    `mapstructure:"max_connections"`
+	HeartbeatInterval  int    `mapstructure:"heartbeat_interval"`   // 心跳间隔（秒）
+	EnableIPForwarding bool   `mapstructure:"enable_ip_forwarding"` // 是否启用IP透传
 }
 
 type AuthConfig struct {
@@ -94,6 +95,7 @@ func setDefaults() {
 	viper.SetDefault("proxy.timeout", 30)
 	viper.SetDefault("proxy.max_connections", 1000)
 	viper.SetDefault("proxy.heartbeat_interval", 5)
+	viper.SetDefault("proxy.enable_ip_forwarding", false)
 
 	viper.SetDefault("auth.session_timeout", 3600)
 	viper.SetDefault("auth.max_login_attempts", 5)

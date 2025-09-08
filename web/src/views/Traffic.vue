@@ -36,7 +36,13 @@
       <template #header>
         <div class="card-header">
           <span>流量日志</span>
-          <el-button type="primary" @click="exportLogs">导出日志</el-button>
+          <div>
+            <el-button type="success" @click="goToTrafficControl">
+              <el-icon><Setting /></el-icon>
+              流量控制
+            </el-button>
+            <el-button type="primary" @click="exportLogs">导出日志</el-button>
+          </div>
         </div>
       </template>
 
@@ -69,12 +75,15 @@
 
 <script setup lang="js">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Setting } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import * as echarts from 'echarts'
 import { formatBytes, formatDate } from '@/utils/formatters'
 
 const authStore = useAuthStore()
+const router = useRouter()
 const loading = ref(false)
 const trafficLogs = ref([])
 const trafficStats = ref({
@@ -190,6 +199,10 @@ const exportLogs = async () => {
   } catch (error) {
     ElMessage.error('日志导出失败')
   }
+}
+
+const goToTrafficControl = () => {
+  router.push('/traffic-control')
 }
 
 onMounted(() => {

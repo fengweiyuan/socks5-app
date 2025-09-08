@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"socks5-app/internal/database"
 	"socks5-app/internal/heartbeat"
 	"socks5-app/internal/logger"
+	"socks5-app/internal/traffic"
 )
 
 const (
@@ -33,11 +35,12 @@ const (
 )
 
 type Socks5Server struct {
-	listener         net.Listener
-	config           *config.ProxyConfig
-	clients          map[string]*Client
-	mu               sync.RWMutex
-	heartbeatService *heartbeat.HeartbeatService
+	listener          net.Listener
+	config            *config.ProxyConfig
+	clients           map[string]*Client
+	mu                sync.RWMutex
+	heartbeatService  *heartbeat.HeartbeatService
+	trafficController *traffic.TrafficController
 }
 
 type Client struct {
@@ -51,10 +54,14 @@ type Client struct {
 }
 
 func NewServer() *Socks5Server {
+	trafficController := traffic.NewTrafficController()
+	trafficController.Start()
+
 	return &Socks5Server{
-		config:           &config.GlobalConfig.Proxy,
-		clients:          make(map[string]*Client),
-		heartbeatService: heartbeat.NewHeartbeatService(),
+		config:            &config.GlobalConfig.Proxy,
+		clients:           make(map[string]*Client),
+		heartbeatService:  heartbeat.NewHeartbeatService(),
+		trafficController: trafficController,
 	}
 }
 
@@ -314,6 +321,14 @@ func (s *Socks5Server) handleConnect(client *Client, targetAddr string, port int
 	}
 	defer targetConn.Close()
 
+	// 如果启用了IP透传，在连接建立后发送客户端IP信息
+	if s.config.EnableIPForwarding {
+		if err := s.sendClientIPInfo(targetConn, client.conn.RemoteAddr().String()); err != nil {
+			logger.Log.Warnf("发送客户端IP信息失败: %v", err)
+			// 即使IP透传失败，也不影响正常代理功能
+		}
+	}
+
 	// 发送成功响应
 	s.sendReply(client.conn, SUCCEEDED, targetAddr, port)
 
@@ -359,6 +374,17 @@ func (s *Socks5Server) forwardData(client *Client, targetConn net.Conn, toTarget
 		}
 
 		if n > 0 {
+			// 应用流量控制
+			if s.trafficController != nil {
+				ctx := context.Background()
+				if err := s.trafficController.ThrottleConnection(ctx, client.user.ID, int64(n)); err != nil {
+					logger.Log.Warnf("流量控制失败: %v", err)
+				}
+
+				// 记录流量到流量控制器
+				s.trafficController.RecordTraffic(client.user.ID, int64(n))
+			}
+
 			_, err = dst.Write(buffer[:n])
 			if err != nil {
 				logger.Log.Errorf("写入数据失败: %v", err)
@@ -420,6 +446,60 @@ func (s *Socks5Server) checkURLFilter(user *database.User, targetAddr string) bo
 	return true
 }
 
+func (s *Socks5Server) sendClientIPInfo(targetConn net.Conn, clientIP string) error {
+	// 实现IP透传功能
+	// 方法1: 使用系统调用设置原始目标地址（需要root权限）
+	if err := s.setOriginalDst(targetConn, clientIP); err != nil {
+		logger.Log.Warnf("设置原始目标地址失败，使用备用方法: %v", err)
+		// 方法2: 在数据流中插入IP信息（可能影响协议）
+		return s.insertIPInfo(targetConn, clientIP)
+	}
+
+	logger.Log.Infof("已设置客户端IP信息到目标服务器: %s", clientIP)
+	return nil
+}
+
+func (s *Socks5Server) setOriginalDst(targetConn net.Conn, clientIP string) error {
+	// 尝试使用系统调用设置原始目标地址
+	// 注意：这个功能需要系统支持且可能需要特殊权限
+	// 目前简化实现，直接返回错误以使用备用方法
+
+	// 获取底层文件描述符
+	tcpConn, ok := targetConn.(*net.TCPConn)
+	if !ok {
+		return errors.New("连接不是TCP连接")
+	}
+
+	file, err := tcpConn.File()
+	if err != nil {
+		return fmt.Errorf("获取文件描述符失败: %v", err)
+	}
+	defer file.Close()
+
+	// 这里可以添加具体的系统调用实现
+	// 由于不同系统的实现差异较大，暂时返回错误使用备用方法
+	_ = file.Fd() // 避免未使用变量警告
+
+	return errors.New("系统调用方法暂未实现，使用备用方法")
+}
+
+func (s *Socks5Server) insertIPInfo(targetConn net.Conn, clientIP string) error {
+	// 备用方法：在数据流中插入IP信息
+	// 注意：这个实现会修改数据流，可能影响某些协议
+	// 建议目标服务器能够处理这种格式的IP信息
+
+	// 使用自定义协议发送客户端IP信息
+	// 格式: "X-Real-IP: <client_ip>\r\nX-Forwarded-For: <client_ip>\r\n\r\n"
+	ipInfo := fmt.Sprintf("X-Real-IP: %s\r\nX-Forwarded-For: %s\r\n\r\n", clientIP, clientIP)
+	_, err := targetConn.Write([]byte(ipInfo))
+	if err != nil {
+		return fmt.Errorf("写入客户端IP信息失败: %v", err)
+	}
+
+	logger.Log.Infof("已插入客户端IP信息到数据流: %s", clientIP)
+	return nil
+}
+
 func (s *Socks5Server) logTraffic(client *Client, targetAddr string, bytes int, sent bool) {
 	// 数据库连接失败时不影响正常服务
 	if database.DB == nil {
@@ -465,4 +545,9 @@ func (s *Socks5Server) GetActiveClients() []*Client {
 		clients = append(clients, client)
 	}
 	return clients
+}
+
+// GetTrafficController 获取流量控制器
+func (s *Socks5Server) GetTrafficController() *traffic.TrafficController {
+	return s.trafficController
 }

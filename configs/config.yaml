@@ -18,6 +18,7 @@ proxy:
   timeout: 30
   max_connections: 1000
   heartbeat_interval: 5
+  enable_ip_forwarding: true  # 启用IP透传功能
 
 auth:
   session_timeout: 3600

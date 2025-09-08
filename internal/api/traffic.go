@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"socks5-app/internal/database"
@@ -191,4 +192,135 @@ func (s *Server) handleSetBandwidthLimit(c *gin.Context) {
 
 	logger.Log.Infof("设置用户 %s 的带宽限制: %d bytes/s", user.Username, req.Limit)
 	c.JSON(http.StatusOK, gin.H{"message": "带宽限制设置成功"})
+}
+
+// BandwidthLimitResponse 带宽限制响应
+type BandwidthLimitResponse struct {
+	ID        uint   `json:"id"`
+	UserID    uint   `json:"user_id"`
+	Username  string `json:"username"`
+	Limit     int64  `json:"limit"`
+	Period    string `json:"period"`
+	Enabled   bool   `json:"enabled"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+// handleGetBandwidthLimits 获取所有用户的带宽限制
+func (s *Server) handleGetBandwidthLimits(c *gin.Context) {
+	var limits []database.BandwidthLimit
+	if err := database.DB.Preload("User").Find(&limits).Error; err != nil {
+		logger.Log.Errorf("获取带宽限制失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取带宽限制失败"})
+		return
+	}
+
+	var response []BandwidthLimitResponse
+	for _, limit := range limits {
+		response = append(response, BandwidthLimitResponse{
+			ID:        limit.ID,
+			UserID:    limit.UserID,
+			Username:  limit.User.Username,
+			Limit:     limit.Limit,
+			Period:    limit.Period,
+			Enabled:   limit.Enabled,
+			CreatedAt: limit.CreatedAt.Format("2006-01-02 15:04:05"),
+			UpdatedAt: limit.UpdatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":  response,
+		"total": len(response),
+	})
+}
+
+// handleUpdateBandwidthLimit 更新用户带宽限制
+func (s *Server) handleUpdateBandwidthLimit(c *gin.Context) {
+	userIDStr := c.Param("user_id")
+	userID, err := strconv.ParseUint(userIDStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的用户ID"})
+		return
+	}
+
+	var req struct {
+		Limit  int64  `json:"limit" binding:"required,min=0"`
+		Period string `json:"period" binding:"required,oneof=daily monthly"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 检查用户是否存在
+	var user database.User
+	if err := database.DB.First(&user, uint(userID)).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
+		return
+	}
+
+	// 更新带宽限制
+	var bandwidthLimit database.BandwidthLimit
+	if err := database.DB.Where("user_id = ?", uint(userID)).First(&bandwidthLimit).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "带宽限制不存在"})
+		return
+	}
+
+	bandwidthLimit.Limit = req.Limit
+	bandwidthLimit.Period = req.Period
+	bandwidthLimit.Enabled = req.Limit > 0
+
+	if err := database.DB.Save(&bandwidthLimit).Error; err != nil {
+		logger.Log.Errorf("更新用户带宽限制失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新带宽限制失败"})
+		return
+	}
+
+	// 同时更新用户的带宽限制字段
+	user.BandwidthLimit = req.Limit
+	database.DB.Save(&user)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "带宽限制更新成功",
+		"data": BandwidthLimitResponse{
+			ID:        bandwidthLimit.ID,
+			UserID:    bandwidthLimit.UserID,
+			Username:  user.Username,
+			Limit:     bandwidthLimit.Limit,
+			Period:    bandwidthLimit.Period,
+			Enabled:   bandwidthLimit.Enabled,
+			CreatedAt: bandwidthLimit.CreatedAt.Format("2006-01-02 15:04:05"),
+			UpdatedAt: bandwidthLimit.UpdatedAt.Format("2006-01-02 15:04:05"),
+		},
+	})
+}
+
+// handleDeleteBandwidthLimit 删除用户带宽限制
+func (s *Server) handleDeleteBandwidthLimit(c *gin.Context) {
+	userIDStr := c.Param("user_id")
+	userID, err := strconv.ParseUint(userIDStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的用户ID"})
+		return
+	}
+
+	// 删除带宽限制
+	if err := database.DB.Where("user_id = ?", uint(userID)).Delete(&database.BandwidthLimit{}).Error; err != nil {
+		logger.Log.Errorf("删除用户带宽限制失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除带宽限制失败"})
+		return
+	}
+
+	// 重置用户的带宽限制字段
+	var user database.User
+	if err := database.DB.First(&user, uint(userID)).Error; err == nil {
+		user.BandwidthLimit = 0
+		database.DB.Save(&user)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "带宽限制删除成功",
+	})
 }

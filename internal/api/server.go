@@ -112,6 +112,9 @@ func (s *Server) setupRoutes() {
 				traffic.GET("", s.handleGetTrafficStats)
 				traffic.GET("/realtime", s.handleGetRealtimeTraffic)
 				traffic.POST("/limit", middleware.AdminMiddleware(), s.handleSetBandwidthLimit)
+				traffic.GET("/limits", middleware.AdminMiddleware(), s.handleGetBandwidthLimits)
+				traffic.PUT("/limits/:user_id", middleware.AdminMiddleware(), s.handleUpdateBandwidthLimit)
+				traffic.DELETE("/limits/:user_id", middleware.AdminMiddleware(), s.handleDeleteBandwidthLimit)
 			}
 
 			// 日志管理

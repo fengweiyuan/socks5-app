@@ -28,6 +28,11 @@
           <template #title>流量监控</template>
         </el-menu-item>
         
+        <el-menu-item index="/traffic-control">
+          <el-icon><Setting /></el-icon>
+          <template #title>流量控制</template>
+        </el-menu-item>
+        
         <el-menu-item index="/logs">
           <el-icon><Document /></el-icon>
           <template #title>日志审计</template>
@@ -91,7 +96,8 @@ import {
   Filter,
   Expand,
   Fold,
-  UserFilled
+  UserFilled,
+  Setting
 } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 

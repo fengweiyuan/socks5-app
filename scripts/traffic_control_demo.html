@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOCKS5 代理流量控制管理</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+        }
+        .section h2 {
+            color: #555;
+            margin-top: 0;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .table th, .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+        .table tr:hover {
+            background-color: #f5f5f5;
+        }
+        .status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status.enabled {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.disabled {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+        .alert-success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .alert-error {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .bandwidth-display {
+            font-family: monospace;
+            background-color: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 SOCKS5 代理流量控制管理</h1>
+        
+        <!-- 设置带宽限制 -->
+        <div class="section">
+            <h2>📊 设置用户带宽限制</h2>
+            <form id="bandwidthForm">
+                <div class="form-group">
+                    <label for="userId">用户ID:</label>
+                    <input type="number" id="userId" name="userId" required min="1">
+                </div>
+                <div class="form-group">
+                    <label for="limit">带宽限制 (字节/秒):</label>
+                    <input type="number" id="limit" name="limit" required min="0" placeholder="例如: 1048576 (1MB/s)">
+                </div>
+                <div class="form-group">
+                    <label for="period">限制周期:</label>
+                    <select id="period" name="period" required>
+                        <option value="daily">日限制</option>
+                        <option value="monthly">月限制</option>
+                    </select>
+                </div>
+                <button type="submit">设置带宽限制</button>
+            </form>
+        </div>
+
+        <!-- 带宽限制列表 -->
+        <div class="section">
+            <h2>📋 用户带宽限制列表</h2>
+            <button onclick="loadBandwidthLimits()" style="width: auto; margin-bottom: 15px;">刷新列表</button>
+            <div id="limitsTable">
+                <div class="loading">点击"刷新列表"加载数据...</div>
+            </div>
+        </div>
+
+        <!-- 流量统计 -->
+        <div class="section">
+            <h2>📈 实时流量统计</h2>
+            <button onclick="loadTrafficStats()" style="width: auto; margin-bottom: 15px;">刷新统计</button>
+            <div id="trafficStats">
+                <div class="loading">点击"刷新统计"加载数据...</div>
+            </div>
+        </div>
+
+        <!-- 操作日志 -->
+        <div class="section">
+            <h2>📝 操作日志</h2>
+            <div id="operationLog">
+                <p>等待操作...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8012/api/v1';
+        let authToken = null;
+
+        // 模拟认证（实际应用中需要真实的认证流程）
+        function getAuthToken() {
+            // 这里应该从登录接口获取真实的 token
+            return 'demo-token';
+        }
+
+        // 显示消息
+        function showMessage(message, type = 'success') {
+            const log = document.getElementById('operationLog');
+            const timestamp = new Date().toLocaleString();
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
+            log.innerHTML = `<div class="alert ${alertClass}">[${timestamp}] ${message}</div>` + log.innerHTML;
+        }
+
+        // 格式化带宽显示
+        function formatBandwidth(bytes) {
+            if (bytes === 0) return '无限制';
+            if (bytes < 1024) return bytes + ' B/s';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB/s';
+            if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB/s';
+            return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB/s';
+        }
+
+        // 设置带宽限制
+        document.getElementById('bandwidthForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = {
+                user_id: parseInt(formData.get('userId')),
+                limit: parseInt(formData.get('limit')),
+                period: formData.get('period')
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/traffic/limit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    showMessage(`成功设置用户 ${data.user_id} 的带宽限制为 ${formatBandwidth(data.limit)}`, 'success');
+                    loadBandwidthLimits(); // 刷新列表
+                    e.target.reset(); // 清空表单
+                } else {
+                    const error = await response.json();
+                    showMessage(`设置失败: ${error.error || '未知错误'}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`请求失败: ${error.message}`, 'error');
+            }
+        });
+
+        // 加载带宽限制列表
+        async function loadBandwidthLimits() {
+            const tableDiv = document.getElementById('limitsTable');
+            tableDiv.innerHTML = '<div class="loading">加载中...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/traffic/limits`, {
+                    headers: {
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.data && result.data.length > 0) {
+                        let tableHTML = `
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>用户ID</th>
+                                        <th>用户名</th>
+                                        <th>带宽限制</th>
+                                        <th>周期</th>
+                                        <th>状态</th>
+                                        <th>更新时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                        `;
+                        
+                        result.data.forEach(limit => {
+                            tableHTML += `
+                                <tr>
+                                    <td>${limit.user_id}</td>
+                                    <td>${limit.username}</td>
+                                    <td><span class="bandwidth-display">${formatBandwidth(limit.limit)}</span></td>
+                                    <td>${limit.period === 'daily' ? '日限制' : '月限制'}</td>
+                                    <td><span class="status ${limit.enabled ? 'enabled' : 'disabled'}">${limit.enabled ? '启用' : '禁用'}</span></td>
+                                    <td>${limit.updated_at}</td>
+                                    <td>
+                                        <button onclick="deleteBandwidthLimit(${limit.user_id})" style="width: auto; padding: 5px 10px; background-color: #dc3545;">删除</button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        
+                        tableHTML += '</tbody></table>';
+                        tableDiv.innerHTML = tableHTML;
+                    } else {
+                        tableDiv.innerHTML = '<p>暂无带宽限制数据</p>';
+                    }
+                } else {
+                    const error = await response.json();
+                    tableDiv.innerHTML = `<p style="color: red;">加载失败: ${error.error || '未知错误'}</p>`;
+                }
+            } catch (error) {
+                tableDiv.innerHTML = `<p style="color: red;">请求失败: ${error.message}</p>`;
+            }
+        }
+
+        // 删除带宽限制
+        async function deleteBandwidthLimit(userId) {
+            if (!confirm(`确定要删除用户 ${userId} 的带宽限制吗？`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/traffic/limits/${userId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    }
+                });
+
+                if (response.ok) {
+                    showMessage(`成功删除用户 ${userId} 的带宽限制`, 'success');
+                    loadBandwidthLimits(); // 刷新列表
+                } else {
+                    const error = await response.json();
+                    showMessage(`删除失败: ${error.error || '未知错误'}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 加载流量统计
+        async function loadTrafficStats() {
+            const statsDiv = document.getElementById('trafficStats');
+            statsDiv.innerHTML = '<div class="loading">加载中...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/traffic`, {
+                    headers: {
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    statsDiv.innerHTML = `
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div style="padding: 15px; background-color: #f8f9fa; border-radius: 6px; text-align: center;">
+                                <h3 style="margin: 0; color: #007bff;">总发送流量</h3>
+                                <p style="margin: 5px 0; font-size: 18px; font-weight: bold;">${formatBandwidth(result.total_bytes_sent || 0)}</p>
+                            </div>
+                            <div style="padding: 15px; background-color: #f8f9fa; border-radius: 6px; text-align: center;">
+                                <h3 style="margin: 0; color: #28a745;">总接收流量</h3>
+                                <p style="margin: 5px 0; font-size: 18px; font-weight: bold;">${formatBandwidth(result.total_bytes_recv || 0)}</p>
+                            </div>
+                            <div style="padding: 15px; background-color: #f8f9fa; border-radius: 6px; text-align: center;">
+                                <h3 style="margin: 0; color: #ffc107;">活跃连接</h3>
+                                <p style="margin: 5px 0; font-size: 18px; font-weight: bold;">${result.active_connections || 0}</p>
+                            </div>
+                            <div style="padding: 15px; background-color: #f8f9fa; border-radius: 6px; text-align: center;">
+                                <h3 style="margin: 0; color: #17a2b8;">在线用户</h3>
+                                <p style="margin: 5px 0; font-size: 18px; font-weight: bold;">${result.online_users || 0}</p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    const error = await response.json();
+                    statsDiv.innerHTML = `<p style="color: red;">加载失败: ${error.error || '未知错误'}</p>`;
+                }
+            } catch (error) {
+                statsDiv.innerHTML = `<p style="color: red;">请求失败: ${error.message}</p>`;
+            }
+        }
+
+        // 页面加载完成后自动加载数据
+        document.addEventListener('DOMContentLoaded', function() {
+            showMessage('流量控制管理界面已加载', 'success');
+        });
+    </script>
+</body>
+</html>
