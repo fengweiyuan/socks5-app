@@ -1,7 +1,7 @@
 server:
   port: "8012"
   host: "0.0.0.0"
-  mode: "debug"
+  mode: "debug"  # "release", "test"
   jwt_key: "your-secret-key-change-this-in-production"
 
 database:

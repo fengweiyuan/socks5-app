@@ -340,11 +340,8 @@ func (mm *MetricsManager) collectSystemMetrics() {
 	ticker := time.NewTicker(30 * time.Second) // 每30秒收集一次
 	defer ticker.Stop()
 
-	for {
-		select {
-		case <-ticker.C:
-			mm.collectSystemMetricsOnce()
-		}
+	for range ticker.C {
+		mm.collectSystemMetricsOnce()
 	}
 }
 

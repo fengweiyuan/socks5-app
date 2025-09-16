@@ -37,8 +37,9 @@ func NewServer() *Server {
 	// 设置Gin模式
 	gin.SetMode(config.GlobalConfig.Server.Mode)
 
+	// 创建一个不带默认中间件的引擎
 	router := gin.New()
-
+	
 	// 使用中间件
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
