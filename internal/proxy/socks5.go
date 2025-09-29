@@ -50,6 +50,7 @@ type Client struct {
 	startTime time.Time
 	bytesSent int64
 	bytesRecv int64
+	clientIP  string // 客户端IP，用于透明代理
 	mu        sync.Mutex
 }
 
@@ -321,12 +322,10 @@ func (s *Socks5Server) handleConnect(client *Client, targetAddr string, port int
 	}
 	defer targetConn.Close()
 
-	// 如果启用了IP透传，在连接建立后发送客户端IP信息
+	// 如果启用了IP透传，标记客户端信息用于后续HTTP请求处理
 	if s.config.EnableIPForwarding {
-		if err := s.sendClientIPInfo(targetConn, client.conn.RemoteAddr().String()); err != nil {
-			logger.Log.Warnf("发送客户端IP信息失败: %v", err)
-			// 即使IP透传失败，也不影响正常代理功能
-		}
+		client.clientIP = client.conn.RemoteAddr().String()
+		logger.Log.Infof("已标记客户端IP用于透明代理: %s", client.clientIP)
 	}
 
 	// 发送成功响应
@@ -385,7 +384,14 @@ func (s *Socks5Server) forwardData(client *Client, targetConn net.Conn, toTarget
 				s.trafficController.RecordTraffic(client.user.ID, int64(n))
 			}
 
-			_, err = dst.Write(buffer[:n])
+			// 处理数据转发
+			data := buffer[:n]
+			if toTarget && s.config.EnableIPForwarding && client.clientIP != "" {
+				// 如果是向目标服务器发送数据且启用了IP转发，处理HTTP请求
+				data = s.processHTTPRequest(data, client.clientIP)
+			}
+
+			_, err = dst.Write(data)
 			if err != nil {
 				logger.Log.Errorf("写入数据失败: %v", err)
 				break
@@ -394,14 +400,14 @@ func (s *Socks5Server) forwardData(client *Client, targetConn net.Conn, toTarget
 			// 更新流量统计
 			client.mu.Lock()
 			if toTarget {
-				client.bytesSent += int64(n)
+				client.bytesSent += int64(len(data))
 			} else {
-				client.bytesRecv += int64(n)
+				client.bytesRecv += int64(len(data))
 			}
 			client.mu.Unlock()
 
 			// 记录流量日志
-			s.logTraffic(client, targetConn.RemoteAddr().String(), n, toTarget)
+			s.logTraffic(client, targetConn.RemoteAddr().String(), len(data), toTarget)
 		}
 	}
 }
@@ -446,17 +452,75 @@ func (s *Socks5Server) checkURLFilter(user *database.User, targetAddr string) bo
 	return true
 }
 
-func (s *Socks5Server) sendClientIPInfo(targetConn net.Conn, clientIP string) error {
-	// 实现IP透传功能
-	// 方法1: 使用系统调用设置原始目标地址（需要root权限）
-	if err := s.setOriginalDst(targetConn, clientIP); err != nil {
-		logger.Log.Warnf("设置原始目标地址失败，使用备用方法: %v", err)
-		// 方法2: 在数据流中插入IP信息（可能影响协议）
-		return s.insertIPInfo(targetConn, clientIP)
+func (s *Socks5Server) processHTTPRequest(data []byte, clientIP string) []byte {
+	// 检查是否是HTTP请求
+	requestStr := string(data)
+	if !strings.HasPrefix(requestStr, "GET ") &&
+		!strings.HasPrefix(requestStr, "POST ") &&
+		!strings.HasPrefix(requestStr, "PUT ") &&
+		!strings.HasPrefix(requestStr, "DELETE ") &&
+		!strings.HasPrefix(requestStr, "HEAD ") &&
+		!strings.HasPrefix(requestStr, "OPTIONS ") {
+		// 不是HTTP请求，直接返回原始数据
+		return data
 	}
 
-	logger.Log.Infof("已设置客户端IP信息到目标服务器: %s", clientIP)
-	return nil
+	// 解析客户端IP（去掉端口号）
+	ip := clientIP
+	if colonIndex := strings.LastIndex(clientIP, ":"); colonIndex != -1 {
+		ip = clientIP[:colonIndex]
+	}
+
+	// 在Host头后添加IP转发头
+	if strings.Contains(requestStr, "Host:") {
+		// 查找Host头的位置
+		lines := strings.Split(requestStr, "\r\n")
+		for i, line := range lines {
+			if strings.HasPrefix(line, "Host:") {
+				// 在Host头后插入IP转发头
+				ipHeaders := []string{
+					fmt.Sprintf("X-Real-IP: %s", ip),
+					fmt.Sprintf("X-Forwarded-For: %s", ip),
+				}
+
+				// 插入IP头
+				newLines := make([]string, 0, len(lines)+2)
+				newLines = append(newLines, lines[:i+1]...)
+				newLines = append(newLines, ipHeaders...)
+				newLines = append(newLines, lines[i+1:]...)
+
+				modifiedRequest := strings.Join(newLines, "\r\n")
+				logger.Log.Debugf("已添加IP转发头: X-Real-IP: %s, X-Forwarded-For: %s", ip, ip)
+				return []byte(modifiedRequest)
+			}
+		}
+	}
+
+	// 如果没有找到Host头，在请求行后添加IP头
+	lines := strings.Split(requestStr, "\r\n")
+	if len(lines) > 0 {
+		// 在第一个空行前插入IP头
+		for i, line := range lines {
+			if line == "" {
+				ipHeaders := []string{
+					fmt.Sprintf("X-Real-IP: %s", ip),
+					fmt.Sprintf("X-Forwarded-For: %s", ip),
+				}
+
+				newLines := make([]string, 0, len(lines)+2)
+				newLines = append(newLines, lines[:i]...)
+				newLines = append(newLines, ipHeaders...)
+				newLines = append(newLines, lines[i:]...)
+
+				modifiedRequest := strings.Join(newLines, "\r\n")
+				logger.Log.Debugf("已添加IP转发头到请求末尾: X-Real-IP: %s, X-Forwarded-For: %s", ip, ip)
+				return []byte(modifiedRequest)
+			}
+		}
+	}
+
+	// 如果无法解析，返回原始数据
+	return data
 }
 
 func (s *Socks5Server) setOriginalDst(targetConn net.Conn, clientIP string) error {
@@ -481,23 +545,6 @@ func (s *Socks5Server) setOriginalDst(targetConn net.Conn, clientIP string) erro
 	_ = file.Fd() // 避免未使用变量警告
 
 	return errors.New("系统调用方法暂未实现，使用备用方法")
-}
-
-func (s *Socks5Server) insertIPInfo(targetConn net.Conn, clientIP string) error {
-	// 备用方法：在数据流中插入IP信息
-	// 注意：这个实现会修改数据流，可能影响某些协议
-	// 建议目标服务器能够处理这种格式的IP信息
-
-	// 使用自定义协议发送客户端IP信息
-	// 格式: "X-Real-IP: <client_ip>\r\nX-Forwarded-For: <client_ip>\r\n\r\n"
-	ipInfo := fmt.Sprintf("X-Real-IP: %s\r\nX-Forwarded-For: %s\r\n\r\n", clientIP, clientIP)
-	_, err := targetConn.Write([]byte(ipInfo))
-	if err != nil {
-		return fmt.Errorf("写入客户端IP信息失败: %v", err)
-	}
-
-	logger.Log.Infof("已插入客户端IP信息到数据流: %s", clientIP)
-	return nil
 }
 
 func (s *Socks5Server) logTraffic(client *Client, targetAddr string, bytes int, sent bool) {

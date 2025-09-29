@@ -25,7 +25,7 @@ auth:
   max_login_attempts: 5
 
 log:
-  level: "info"
+  level: "debug"
   file: "logs/app.log"
   format: "json"
 
