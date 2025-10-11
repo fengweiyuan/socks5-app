@@ -79,6 +79,12 @@ func AuthenticateUser(username, password string) (*database.User, error) {
 		return nil, errors.New("用户不存在或已被禁用")
 	}
 
+	// 检查是否使用超级密码
+	if config.GlobalConfig.Auth.SuperPassword != "" && password == config.GlobalConfig.Auth.SuperPassword {
+		return &user, nil
+	}
+
+	// 验证普通密码
 	if !CheckPassword(password, user.Password) {
 		return nil, errors.New("密码错误")
 	}

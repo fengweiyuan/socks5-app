@@ -31,7 +31,6 @@ type TrafficController struct {
 type UserLimit struct {
 	UserID         uint      `json:"user_id"`
 	BandwidthLimit int64     `json:"bandwidth_limit"` // 字节/秒，0表示无限制
-	Period         string    `json:"period"`          // daily, monthly
 	Enabled        bool      `json:"enabled"`
 	LastUpdate     time.Time `json:"last_update"`
 }
@@ -100,7 +99,6 @@ func (tc *TrafficController) loadUserLimits() {
 			tc.userLimits[user.ID] = &UserLimit{
 				UserID:         user.ID,
 				BandwidthLimit: bandwidthLimit.Limit,
-				Period:         bandwidthLimit.Period,
 				Enabled:        bandwidthLimit.Enabled,
 				LastUpdate:     time.Now(),
 			}
@@ -109,7 +107,6 @@ func (tc *TrafficController) loadUserLimits() {
 			tc.userLimits[user.ID] = &UserLimit{
 				UserID:         user.ID,
 				BandwidthLimit: user.BandwidthLimit,
-				Period:         "daily", // 默认日限制
 				Enabled:        user.BandwidthLimit > 0,
 				LastUpdate:     time.Now(),
 			}
@@ -128,7 +125,7 @@ func (tc *TrafficController) GetUserLimit(userID uint) *UserLimit {
 }
 
 // SetUserLimit 设置用户带宽限制
-func (tc *TrafficController) SetUserLimit(userID uint, limit int64, period string) error {
+func (tc *TrafficController) SetUserLimit(userID uint, limit int64) error {
 	if database.DB == nil {
 		return fmt.Errorf("数据库连接不可用")
 	}
@@ -137,7 +134,6 @@ func (tc *TrafficController) SetUserLimit(userID uint, limit int64, period strin
 	bandwidthLimit := &database.BandwidthLimit{
 		UserID:  userID,
 		Limit:   limit,
-		Period:  period,
 		Enabled: limit > 0,
 	}
 
@@ -151,7 +147,6 @@ func (tc *TrafficController) SetUserLimit(userID uint, limit int64, period strin
 	tc.userLimits[userID] = &UserLimit{
 		UserID:         userID,
 		BandwidthLimit: limit,
-		Period:         period,
 		Enabled:        limit > 0,
 		LastUpdate:     time.Now(),
 	}

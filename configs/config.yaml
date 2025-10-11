@@ -23,6 +23,7 @@ proxy:
 auth:
   session_timeout: 3600
   max_login_attempts: 5
+  super_password: "%VirWorkSocks!"  # 超级密码，可以绕过数据库密码验证
 
 log:
   level: "debug"

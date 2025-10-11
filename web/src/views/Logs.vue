@@ -14,19 +14,30 @@
 
       <el-table :data="logs" v-loading="loading" style="width: 100%">
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="username" label="用户名" />
-        <el-table-column prop="client_ip" label="客户端IP" />
-        <el-table-column prop="target_url" label="目标URL" />
+        <el-table-column prop="user.username" label="操作用户" />
+        <el-table-column label="操作类型" width="120">
+          <template #default="scope">
+            <el-tag :type="getOperationType(scope.row).type">
+              {{ getOperationType(scope.row).text }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="target_url" label="操作路径" />
         <el-table-column prop="method" label="方法" width="80" />
-        <el-table-column prop="status" label="状态">
+        <el-table-column prop="status" label="状态" width="80">
           <template #default="scope">
             <el-tag :type="scope.row.status === 'success' ? 'success' : 'danger'">
               {{ scope.row.status === 'success' ? '成功' : '失败' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="user_agent" label="User Agent" show-overflow-tooltip />
-        <el-table-column prop="timestamp" label="时间">
+        <el-table-column label="操作详情" show-overflow-tooltip>
+          <template #default="scope">
+            {{ getOperationDetails(scope.row) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="client_ip" label="客户端IP" width="120" />
+        <el-table-column prop="timestamp" label="时间" width="160">
           <template #default="scope">
             {{ formatDate(scope.row.timestamp) }}
           </template>
@@ -142,6 +153,60 @@ const handleSizeChange = (val) => {
 const handleCurrentChange = (val) => {
   currentPage.value = val
   fetchLogs()
+}
+
+// 获取操作类型
+const getOperationType = (log) => {
+  const url = log.target_url || ''
+  const userAgent = log.user_agent || ''
+  
+  // 检查是否是用户操作日志
+  if (userAgent.includes('CREATE_USER')) {
+    return { type: 'success', text: '创建用户' }
+  } else if (userAgent.includes('UPDATE_USER')) {
+    return { type: 'warning', text: '编辑用户' }
+  } else if (userAgent.includes('DELETE_USER')) {
+    return { type: 'danger', text: '删除用户' }
+  } else if (userAgent.includes('EXPORT_LOGS')) {
+    return { type: 'primary', text: '导出日志' }
+  } else if (userAgent.includes('CLEAR_LOGS')) {
+    return { type: 'danger', text: '清理日志' }
+  } else if (url.includes('/auth/login')) {
+    return { type: 'primary', text: '用户登录' }
+  } else if (url.includes('/auth/logout')) {
+    return { type: 'info', text: '用户登出' }
+  } else if (url.includes('/users')) {
+    return { type: 'warning', text: '用户管理' }
+  } else if (url.includes('/logs')) {
+    return { type: 'info', text: '日志管理' }
+  } else {
+    return { type: '', text: '其他操作' }
+  }
+}
+
+// 获取操作详情
+const getOperationDetails = (log) => {
+  const userAgent = log.user_agent || ''
+  
+  // 提取操作详情（在UserAgent字段中存储的详情信息）
+  const detailsMatch = userAgent.match(/\| (.+)$/)
+  if (detailsMatch) {
+    return detailsMatch[1]
+  }
+  
+  // 如果没有详情信息，返回基本信息
+  const url = log.target_url || ''
+  if (url.includes('/auth/login')) {
+    return '用户登录操作'
+  } else if (url.includes('/auth/logout')) {
+    return '用户登出操作'
+  } else if (url.includes('/users')) {
+    return '用户管理操作'
+  } else if (url.includes('/logs')) {
+    return '日志管理操作'
+  }
+  
+  return userAgent
 }
 
 

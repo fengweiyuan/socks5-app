@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试前端401重定向</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        #log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 4px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>测试前端401重定向功能</h1>
+    
+    <div class="test-section info">
+        <h3>测试说明</h3>
+        <p>这个页面模拟前端Vue应用的行为，测试当API返回401错误时是否会自动重定向到登录页面。</p>
+        <p>测试步骤：</p>
+        <ol>
+            <li>先登录获取有效token</li>
+            <li>使用有效token访问API</li>
+            <li>使用过期token访问API，观察是否自动跳转</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h3>控制面板</h3>
+        <button onclick="login()">1. 登录获取Token</button>
+        <button onclick="testValidToken()">2. 测试有效Token</button>
+        <button onclick="testExpiredToken()">3. 测试过期Token</button>
+        <button onclick="clearLog()">清空日志</button>
+        <button onclick="clearToken()">清除Token</button>
+    </div>
+
+    <div class="test-section">
+        <h3>当前状态</h3>
+        <p><strong>Token:</strong> <span id="tokenStatus">未设置</span></p>
+        <p><strong>最后操作:</strong> <span id="lastAction">无</span></p>
+    </div>
+
+    <div class="test-section">
+        <h3>操作日志</h3>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8012/api/v1';
+        let currentToken = null;
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.style.color = type === 'error' ? 'red' : type === 'success' ? 'green' : 'black';
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        function updateStatus() {
+            const tokenStatus = document.getElementById('tokenStatus');
+            const lastAction = document.getElementById('lastAction');
+            
+            if (currentToken) {
+                tokenStatus.textContent = `已设置 (${currentToken.substring(0, 20)}...)`;
+            } else {
+                tokenStatus.textContent = '未设置';
+            }
+        }
+
+        function clearToken() {
+            currentToken = null;
+            localStorage.removeItem('token');
+            updateStatus();
+            log('Token已清除', 'info');
+        }
+
+        // 模拟axios响应拦截器的行为
+        function handleApiResponse(response, error = null) {
+            if (error) {
+                log(`请求失败: ${error.message}`, 'error');
+                if (error.response && error.response.status === 401) {
+                    log('检测到401错误，模拟重定向到登录页面...', 'error');
+                    currentToken = null;
+                    localStorage.removeItem('token');
+                    updateStatus();
+                    
+                    // 模拟重定向
+                    setTimeout(() => {
+                        alert('会话已过期，即将跳转到登录页面');
+                        // 在实际应用中这里会是: window.location.href = '/login'
+                        log('模拟跳转到登录页面', 'error');
+                    }, 1000);
+                }
+                return Promise.reject(error);
+            }
+            
+            if (response.status === 401) {
+                log('检测到401错误，模拟重定向到登录页面...', 'error');
+                currentToken = null;
+                localStorage.removeItem('token');
+                updateStatus();
+                
+                setTimeout(() => {
+                    alert('会话已过期，即将跳转到登录页面');
+                    log('模拟跳转到登录页面', 'error');
+                }, 1000);
+                
+                return Promise.reject(new Error('Unauthorized'));
+            }
+            
+            return response;
+        }
+
+        async function login() {
+            log('开始登录...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'testuser',
+                        password: 'testpass'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentToken = data.token;
+                    localStorage.setItem('token', data.token);
+                    updateStatus();
+                    log('登录成功，获取到token', 'success');
+                } else {
+                    log(`登录失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`登录请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testValidToken() {
+            if (!currentToken) {
+                log('请先登录获取token', 'error');
+                return;
+            }
+
+            log('使用有效token访问用户列表...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/users`, {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`成功获取用户列表，共${data.users.length}个用户`, 'success');
+                } else {
+                    const errorData = await response.json();
+                    log(`请求失败: ${response.status} - ${errorData.error}`, 'error');
+                }
+            } catch (error) {
+                log(`请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testExpiredToken() {
+            log('创建过期token并测试...', 'info');
+            
+            // 创建一个明显过期的token（简单模拟）
+            const expiredToken = currentToken ? currentToken.replace(/\./g, 'X') : 'expired_token';
+            
+            log('使用过期token访问用户列表...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/users`, {
+                    headers: {
+                        'Authorization': `Bearer ${expiredToken}`
+                    }
+                });
+
+                // 手动检查401响应
+                if (response.status === 401) {
+                    log('检测到401错误（会话过期）', 'error');
+                    handleApiResponse(response);
+                } else if (response.ok) {
+                    const data = await response.json();
+                    log(`意外成功: ${data.users.length}个用户`, 'success');
+                } else {
+                    const errorData = await response.json();
+                    log(`请求失败: ${response.status} - ${errorData.error}`, 'error');
+                }
+            } catch (error) {
+                log(`请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 页面加载时检查是否有保存的token
+        window.onload = function() {
+            const savedToken = localStorage.getItem('token');
+            if (savedToken) {
+                currentToken = savedToken;
+                updateStatus();
+                log('从本地存储恢复token', 'info');
+            }
+        };
+    </script>
+</body>
+</html>

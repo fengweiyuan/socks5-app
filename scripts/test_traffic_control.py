@@ -59,7 +59,7 @@ def test_database_bandwidth_limits():
         result = subprocess.run([
             "mysql", "-h", "127.0.0.1", "-u", "socks5_user", 
             "-psocks5_password", "socks5_db", "-e", 
-            "SELECT id, user_id, limit_value, period, enabled FROM bandwidth_limits LIMIT 5;"
+            "SELECT id, user_id, `limit`, period, enabled FROM bandwidth_limits LIMIT 5;"
         ], capture_output=True, text=True, timeout=10)
         
         if result.returncode == 0:
@@ -109,10 +109,10 @@ def create_test_bandwidth_limit():
             "mysql", "-h", "127.0.0.1", "-u", "socks5_user", 
             "-psocks5_password", "socks5_db", "-e", 
             """
-            INSERT INTO bandwidth_limits (user_id, limit_value, period, enabled) 
+            INSERT INTO bandwidth_limits (user_id, `limit`, period, enabled) 
             VALUES (2, 512000, 'daily', TRUE) 
             ON DUPLICATE KEY UPDATE 
-            limit_value = 512000, 
+            `limit` = 512000, 
             period = 'daily', 
             enabled = TRUE;
             """

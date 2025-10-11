@@ -1,0 +1,86 @@
+ID,用户名,客户端IP,目标URL,方法,状态,用户代理,时间
+85,testuser2,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 18:00:04
+84,testuser2,::1,/api/v1/logs,DELETE,success,python-requests/2.31.0 | deleted_records:0,2025-09-30 17:59:50
+83,testuser2,::1,/api/v1/logs/export,GET,success,python-requests/2.31.0 | exported_records:82,2025-09-30 17:59:49
+82,testuser2,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 17:59:49
+81,admin,::1,/api/v1/auth/login,POST,success,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",2025-09-30 17:59:11
+80,testuser,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 17:58:17
+79,testuser,::1,/api/v1/auth/logout,POST,success,python-requests/2.31.0,2025-09-30 17:58:16
+78,testuser,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 17:58:16
+76,testuser,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 17:58:15
+77,testuser,::1,/api/v1/auth/logout,POST,success,python-requests/2.31.0,2025-09-30 17:58:15
+75,testuser,::1,/api/v1/auth/logout,POST,success,python-requests/2.31.0,2025-09-30 17:58:14
+74,testuser,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 17:58:14
+73,testuser,::1,/api/v1/auth/logout,POST,success,python-requests/2.31.0,2025-09-30 17:58:13
+72,testuser,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 17:58:12
+71,testuser2,::1,/api/v1/users/19,DELETE,success,"python-requests/2.31.0 | target_user_id:19,deleted_user_role:user,deleted_user_email:updated@example.com",2025-09-30 17:52:27
+70,testuser2,::1,/api/v1/users/19,PUT,success,"python-requests/2.31.0 | target_user_id:19,email:updated@example.com,role:user,status:active,bandwidth_limit:2048",2025-09-30 17:52:26
+69,testuser2,::1,/api/v1/users,POST,success,"python-requests/2.31.0 | role:user,email:logtest@example.com,bandwidth_limit:1024",2025-09-30 17:52:25
+68,testuser2,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 17:52:24
+67,testuser2,::1,/api/v1/users,POST,success,"python-requests/2.31.0 | role:user,email:logtest@example.com,bandwidth_limit:1024",2025-09-30 17:51:55
+66,testuser2,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 17:51:55
+65,testuser2,::1,/api/v1/users/17,DELETE,success,"python-requests/2.31.0 | target_user_id:17,deleted_user_role:user,deleted_user_email:updated@example.com",2025-09-30 17:51:33
+64,testuser2,::1,/api/v1/users/17,PUT,success,"python-requests/2.31.0 | target_user_id:17,email:updated@example.com,role:user,status:active,bandwidth_limit:2048",2025-09-30 17:51:32
+63,testuser2,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 17:51:31
+62,testuser2,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 17:50:50
+61,testuser,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 17:12:36
+60,testuser,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 17:11:13
+59,testuser,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 17:11:03
+58,admin,::1,/api/v1/auth/login,POST,success,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",2025-09-30 16:57:30
+57,testuser2,127.0.0.1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 13:02:04
+56,testuser2,127.0.0.1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 12:57:49
+55,testuser2,127.0.0.1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 12:55:02
+54,testuser2,127.0.0.1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 12:54:34
+53,testuser2,127.0.0.1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 12:54:07
+52,testuser2,127.0.0.1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 12:54:01
+51,testuser2,127.0.0.1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 12:49:08
+50,testuser2,127.0.0.1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 12:48:01
+49,testuser2,127.0.0.1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-30 12:47:45
+48,admin,::1,/api/v1/auth/login,POST,success,curl/8.7.1,2025-09-30 12:43:00
+47,admin,::1,/api/v1/auth/login,POST,success,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",2025-09-30 12:33:25
+46,admin,::1,/api/v1/auth/login,POST,success,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",2025-09-15 16:50:19
+45,admin,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-08 20:35:17
+44,admin,::1,/api/v1/auth/login,POST,success,curl/8.7.1,2025-09-08 20:34:31
+43,admin,::1,/api/v1/auth/login,POST,success,curl/8.7.1,2025-09-08 20:34:12
+42,admin,::1,/api/v1/auth/login,POST,success,curl/8.7.1,2025-09-08 20:34:01
+41,admin,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-08 20:22:40
+40,admin,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-08 20:13:35
+39,admin,::1,/api/v1/auth/login,POST,success,curl/8.7.1,2025-09-08 20:13:29
+38,admin,::1,/api/v1/auth/login,POST,success,curl/8.7.1,2025-09-08 20:12:56
+37,admin,::1,/api/v1/auth/login,POST,success,curl/8.7.1,2025-09-08 20:12:46
+36,admin,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-08 20:12:32
+35,admin,::1,/api/v1/auth/login,POST,success,curl/8.7.1,2025-09-08 20:10:20
+34,fwy,::1,/api/v1/auth/login,POST,success,curl/8.7.1,2025-09-08 20:10:16
+33,admin,::1,/api/v1/auth/login,POST,success,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",2025-09-08 20:09:51
+32,admin,::1,/api/v1/auth/login,POST,success,curl/8.7.1,2025-09-08 20:09:31
+31,admin,::1,/api/v1/auth/login,POST,success,curl/8.7.1,2025-09-08 20:01:24
+30,admin,::1,/api/v1/auth/login,POST,success,curl/8.7.1,2025-09-08 20:01:06
+29,admin,::1,/api/v1/auth/login,POST,success,curl/8.7.1,2025-09-08 20:00:49
+28,admin,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-08 20:00:41
+27,admin,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-08 19:59:59
+26,admin,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-08 19:59:35
+25,admin,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-08 19:57:30
+24,admin,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-08 19:52:51
+23,admin,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-08 19:52:32
+22,admin,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-08 19:51:13
+21,admin,::1,/api/v1/auth/login,POST,success,curl/8.7.1,2025-09-08 19:45:03
+20,admin,::1,/api/v1/auth/login,POST,success,curl/8.7.1,2025-09-08 19:44:28
+19,admin,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-08 19:42:46
+18,admin,::1,/api/v1/auth/login,POST,success,curl/8.7.1,2025-09-08 19:41:37
+17,admin,::1,/api/v1/auth/login,POST,success,curl/8.7.1,2025-09-08 19:40:55
+16,admin,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-08 19:40:50
+15,admin,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-08 19:39:48
+14,admin,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-08 19:39:10
+13,admin,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-08 19:38:19
+12,admin,::1,/api/v1/auth/login,POST,success,python-requests/2.31.0,2025-09-08 19:38:03
+11,admin,::1,/api/v1/auth/login,POST,success,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",2025-09-08 19:01:35
+10,admin,::1,/api/v1/auth/logout,POST,success,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",2025-09-08 19:01:30
+9,admin,::1,/api/v1/auth/login,POST,success,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",2025-09-08 18:33:50
+8,admin,::1,/api/v1/auth/login,POST,success,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",2025-09-08 17:32:43
+7,admin,::1,/api/v1/auth/login,POST,success,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",2025-09-03 11:41:51
+6,admin,::1,/api/v1/auth/login,POST,success,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",2025-09-03 10:37:50
+5,admin,::1,/api/v1/auth/login,POST,success,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",2025-09-03 02:15:31
+4,admin,::1,/api/v1/auth/login,POST,success,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",2025-09-03 02:04:27
+3,admin,::1,/api/v1/auth/logout,POST,success,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",2025-09-03 02:04:19
+2,admin,::1,/api/v1/auth/login,POST,success,curl/8.7.1,2025-09-03 01:12:09
+1,admin,::1,/api/v1/auth/login,POST,success,curl/8.7.1,2025-09-03 01:11:37

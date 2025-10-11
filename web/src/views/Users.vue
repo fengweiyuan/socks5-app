@@ -94,6 +94,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { formatDate } from '@/utils/formatters'
+import api from '@/api/auth'
 
 const authStore = useAuthStore()
 const loading = ref(false)
@@ -132,15 +133,8 @@ const rules = {
 const fetchUsers = async () => {
   loading.value = true
   try {
-    const response = await fetch('/api/v1/users', {
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`
-      }
-    })
-    if (response.ok) {
-      const data = await response.json()
-      users.value = data.users
-    }
+    const data = await api.get('/users')
+    users.value = data.users
   } catch (error) {
     ElMessage.error('获取用户列表失败')
   } finally {
@@ -160,26 +154,15 @@ const saveUser = async () => {
   await userFormRef.value.validate(async (valid) => {
     if (valid) {
       try {
-        const url = editingUser.value 
-          ? `/api/v1/users/${editingUser.value.id}`
-          : '/api/v1/users'
-        
-        const method = editingUser.value ? 'PUT' : 'POST'
-        
-        const response = await fetch(url, {
-          method,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authStore.token}`
-          },
-          body: JSON.stringify(userForm.value)
-        })
-        
-        if (response.ok) {
-          ElMessage.success(editingUser.value ? '用户更新成功' : '用户创建成功')
-          showCreateDialog.value = false
-          fetchUsers()
+        if (editingUser.value) {
+          await api.put(`/users/${editingUser.value.id}`, userForm.value)
+        } else {
+          await api.post('/users', userForm.value)
         }
+        
+        ElMessage.success(editingUser.value ? '用户更新成功' : '用户创建成功')
+        showCreateDialog.value = false
+        fetchUsers()
       } catch (error) {
         ElMessage.error('操作失败')
       }
@@ -195,17 +178,9 @@ const deleteUser = async (userId) => {
       type: 'warning'
     })
     
-    const response = await fetch(`/api/v1/users/${userId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`
-      }
-    })
-    
-    if (response.ok) {
-      ElMessage.success('用户删除成功')
-      fetchUsers()
-    }
+    await api.delete(`/users/${userId}`)
+    ElMessage.success('用户删除成功')
+    fetchUsers()
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('删除失败')

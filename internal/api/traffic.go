@@ -28,9 +28,8 @@ type RealtimeTraffic struct {
 }
 
 type BandwidthLimitRequest struct {
-	UserID uint   `json:"user_id" binding:"required"`
-	Limit  int64  `json:"limit" binding:"required"`
-	Period string `json:"period"`
+	UserID uint  `json:"user_id" binding:"required"`
+	Limit  int64 `json:"limit" binding:"required"`
 }
 
 func (s *Server) handleGetTrafficStats(c *gin.Context) {
@@ -314,9 +313,7 @@ func (s *Server) handleSetBandwidthLimit(c *gin.Context) {
 	if err := database.DB.Where("user_id = ?", req.UserID).First(&existingLimit).Error; err == nil {
 		// 更新现有限制
 		existingLimit.Limit = req.Limit
-		if req.Period != "" {
-			existingLimit.Period = req.Period
-		}
+		existingLimit.Enabled = req.Limit > 0
 		if err := database.DB.Save(&existingLimit).Error; err != nil {
 			logger.Log.Errorf("更新带宽限制失败: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新带宽限制失败"})
@@ -325,9 +322,9 @@ func (s *Server) handleSetBandwidthLimit(c *gin.Context) {
 	} else {
 		// 创建新的带宽限制
 		bandwidthLimit := &database.BandwidthLimit{
-			UserID: req.UserID,
-			Limit:  req.Limit,
-			Period: req.Period,
+			UserID:  req.UserID,
+			Limit:   req.Limit,
+			Enabled: req.Limit > 0,
 		}
 		if err := database.DB.Create(bandwidthLimit).Error; err != nil {
 			logger.Log.Errorf("创建带宽限制失败: %v", err)
@@ -350,7 +347,6 @@ type BandwidthLimitResponse struct {
 	UserID    uint   `json:"user_id"`
 	Username  string `json:"username"`
 	Limit     int64  `json:"limit"`
-	Period    string `json:"period"`
 	Enabled   bool   `json:"enabled"`
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
@@ -372,7 +368,6 @@ func (s *Server) handleGetBandwidthLimits(c *gin.Context) {
 			UserID:    limit.UserID,
 			Username:  limit.User.Username,
 			Limit:     limit.Limit,
-			Period:    limit.Period,
 			Enabled:   limit.Enabled,
 			CreatedAt: limit.CreatedAt.Format("2006-01-02 15:04:05"),
 			UpdatedAt: limit.UpdatedAt.Format("2006-01-02 15:04:05"),
@@ -395,8 +390,7 @@ func (s *Server) handleUpdateBandwidthLimit(c *gin.Context) {
 	}
 
 	var req struct {
-		Limit  int64  `json:"limit" binding:"required,min=0"`
-		Period string `json:"period" binding:"required,oneof=daily monthly"`
+		Limit int64 `json:"limit" binding:"required,min=0"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -419,7 +413,6 @@ func (s *Server) handleUpdateBandwidthLimit(c *gin.Context) {
 	}
 
 	bandwidthLimit.Limit = req.Limit
-	bandwidthLimit.Period = req.Period
 	bandwidthLimit.Enabled = req.Limit > 0
 
 	if err := database.DB.Save(&bandwidthLimit).Error; err != nil {
@@ -439,7 +432,6 @@ func (s *Server) handleUpdateBandwidthLimit(c *gin.Context) {
 			UserID:    bandwidthLimit.UserID,
 			Username:  user.Username,
 			Limit:     bandwidthLimit.Limit,
-			Period:    bandwidthLimit.Period,
 			Enabled:   bandwidthLimit.Enabled,
 			CreatedAt: bandwidthLimit.CreatedAt.Format("2006-01-02 15:04:05"),
 			UpdatedAt: bandwidthLimit.UpdatedAt.Format("2006-01-02 15:04:05"),
@@ -472,6 +464,62 @@ func (s *Server) handleDeleteBandwidthLimit(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "带宽限制删除成功",
+	})
+}
+
+// handleToggleBandwidthLimit 切换用户带宽限制启用/禁用状态
+func (s *Server) handleToggleBandwidthLimit(c *gin.Context) {
+	userIDStr := c.Param("user_id")
+	userID, err := strconv.ParseUint(userIDStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的用户ID"})
+		return
+	}
+
+	var req struct {
+		Enabled bool `json:"enabled"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 检查用户是否存在
+	var user database.User
+	if err := database.DB.First(&user, uint(userID)).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
+		return
+	}
+
+	// 更新带宽限制enabled状态
+	var bandwidthLimit database.BandwidthLimit
+	if err := database.DB.Where("user_id = ?", uint(userID)).First(&bandwidthLimit).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "带宽限制不存在"})
+		return
+	}
+
+	bandwidthLimit.Enabled = req.Enabled
+
+	if err := database.DB.Save(&bandwidthLimit).Error; err != nil {
+		logger.Log.Errorf("更新带宽限制启用状态失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新状态失败"})
+		return
+	}
+
+	logger.Log.Infof("用户 %s 的带宽限制已%s", user.Username, map[bool]string{true: "启用", false: "禁用"}[req.Enabled])
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "状态更新成功",
+		"data": BandwidthLimitResponse{
+			ID:        bandwidthLimit.ID,
+			UserID:    bandwidthLimit.UserID,
+			Username:  user.Username,
+			Limit:     bandwidthLimit.Limit,
+			Enabled:   bandwidthLimit.Enabled,
+			CreatedAt: bandwidthLimit.CreatedAt.Format("2006-01-02 15:04:05"),
+			UpdatedAt: bandwidthLimit.UpdatedAt.Format("2006-01-02 15:04:05"),
+		},
 	})
 }
 

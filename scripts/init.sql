@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS ip_whitelists (
 CREATE TABLE IF NOT EXISTS bandwidth_limits (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT UNSIGNED NOT NULL,
-    limit_value BIGINT NOT NULL,
+    `limit` BIGINT NOT NULL,
     period ENUM('daily', 'monthly') DEFAULT 'daily',
     enabled BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

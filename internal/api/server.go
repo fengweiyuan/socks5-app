@@ -39,7 +39,7 @@ func NewServer() *Server {
 
 	// 创建一个不带默认中间件的引擎
 	router := gin.New()
-	
+
 	// 使用中间件
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
@@ -125,6 +125,7 @@ func (s *Server) setupRoutes() {
 				traffic.POST("/limit", middleware.AdminMiddleware(), s.handleSetBandwidthLimit)
 				traffic.GET("/limits", middleware.AdminMiddleware(), s.handleGetBandwidthLimits)
 				traffic.PUT("/limits/:user_id", middleware.AdminMiddleware(), s.handleUpdateBandwidthLimit)
+				traffic.PUT("/limits/:user_id/toggle", middleware.AdminMiddleware(), s.handleToggleBandwidthLimit)
 				traffic.DELETE("/limits/:user_id", middleware.AdminMiddleware(), s.handleDeleteBandwidthLimit)
 			}
 

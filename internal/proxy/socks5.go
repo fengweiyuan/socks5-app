@@ -293,11 +293,18 @@ func (s *Socks5Server) handleRequest(client *Client) error {
 	}
 	port := binary.BigEndian.Uint16(portBuf)
 
+	// 添加调试日志
+	logger.Log.Infof("准备检查URL过滤 - 用户: %s (Role:%s, ID:%d), 目标: %s:%d",
+		client.user.Username, client.user.Role, client.user.ID, targetAddr, port)
+
 	// 检查URL过滤
 	if !s.checkURLFilter(client.user, targetAddr) {
+		logger.Log.Warnf("URL被过滤器阻止 - 用户: %s, 目标: %s", client.user.Username, targetAddr)
 		s.sendReply(client.conn, FAILED, targetAddr, int(port))
-		return errors.New("URL被过滤")
+		return fmt.Errorf("URL被过滤: %s", targetAddr)
 	}
+
+	logger.Log.Infof("URL过滤检查通过 - 用户: %s, 目标: %s", client.user.Username, targetAddr)
 
 	// 处理不同类型的命令
 	switch cmd {
@@ -429,6 +436,9 @@ func (s *Socks5Server) sendReply(conn net.Conn, reply byte, addr string, port in
 }
 
 func (s *Socks5Server) checkURLFilter(user *database.User, targetAddr string) bool {
+	logger.Log.Infof("checkURLFilter被调用 - 用户: %s (Role:%s), 目标: %s",
+		user.Username, user.Role, targetAddr)
+
 	// 检查URL过滤规则（数据库连接失败时允许通过）
 	if database.DB == nil {
 		logger.Log.Warn("数据库连接不可用，跳过URL过滤检查")
@@ -441,9 +451,21 @@ func (s *Socks5Server) checkURLFilter(user *database.User, targetAddr string) bo
 		return true // 数据库查询失败时允许通过
 	}
 
+	logger.Log.Infof("查询到 %d 条启用的过滤规则", len(filters))
+
 	for _, filter := range filters {
 		if strings.Contains(targetAddr, filter.Pattern) {
 			if filter.Type == "block" {
+				// 记录详细的阻止日志
+				logger.Log.Warnf(
+					"URL过滤: 阻止访问 | 用户: %s (ID:%d) | 目标地址: %s | 匹配规则: [ID:%d] Pattern:'%s' | 描述: %s",
+					user.Username,
+					user.ID,
+					targetAddr,
+					filter.ID,
+					filter.Pattern,
+					filter.Description,
+				)
 				return false
 			}
 		}

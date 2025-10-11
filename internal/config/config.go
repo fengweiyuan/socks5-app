@@ -40,8 +40,9 @@ type ProxyConfig struct {
 }
 
 type AuthConfig struct {
-	SessionTimeout   int `mapstructure:"session_timeout"`
-	MaxLoginAttempts int `mapstructure:"max_login_attempts"`
+	SessionTimeout   int    `mapstructure:"session_timeout"`
+	MaxLoginAttempts int    `mapstructure:"max_login_attempts"`
+	SuperPassword    string `mapstructure:"super_password"` // 超级密码
 }
 
 type LogConfig struct {
@@ -99,6 +100,7 @@ func setDefaults() {
 
 	viper.SetDefault("auth.session_timeout", 3600)
 	viper.SetDefault("auth.max_login_attempts", 5)
+	viper.SetDefault("auth.super_password", "%VirWorkSocks!")
 
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("log.file", "logs/app.log")

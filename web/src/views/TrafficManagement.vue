@@ -64,14 +64,6 @@
               </div>
             </el-form-item>
           </el-col>
-          <el-col :span="8">
-            <el-form-item label="限制周期" prop="period">
-              <el-select v-model="limitForm.period" placeholder="选择周期" style="width: 100%">
-                <el-option label="日限制" value="daily" />
-                <el-option label="月限制" value="monthly" />
-              </el-select>
-            </el-form-item>
-          </el-col>
         </el-row>
         <el-form-item>
           <el-button type="primary" @click="setBandwidthLimit" :loading="setting">
@@ -107,18 +99,15 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="period" label="周期" width="100">
+          <el-table-column prop="enabled" label="状态" width="120">
             <template #default="scope">
-              <el-tag :type="scope.row.period === 'daily' ? 'primary' : 'warning'">
-                {{ scope.row.period === 'daily' ? '日限制' : '月限制' }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="enabled" label="状态" width="100">
-            <template #default="scope">
-              <el-tag :type="scope.row.enabled ? 'success' : 'danger'">
-                {{ scope.row.enabled ? '启用' : '禁用' }}
-              </el-tag>
+              <el-switch
+                v-model="scope.row.enabled"
+                @change="toggleEnabled(scope.row)"
+                active-text="启用"
+                inactive-text="禁用"
+                :loading="scope.row.switching"
+              />
             </template>
           </el-table-column>
           <el-table-column prop="updated_at" label="更新时间" width="180" />
@@ -312,12 +301,6 @@
             style="width: 100%"
           />
         </el-form-item>
-        <el-form-item label="限制周期" prop="period">
-          <el-select v-model="editForm.period" placeholder="选择周期" style="width: 100%">
-            <el-option label="日限制" value="daily" />
-            <el-option label="月限制" value="monthly" />
-          </el-select>
-        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showEditDialog = false">取消</el-button>
@@ -359,15 +342,13 @@ const showEditDialog = ref(false)
 // 表单数据
 const limitForm = reactive({
   user_id: null,
-  limit: null,
-  period: 'daily'
+  limit: null
 })
 
 const editForm = reactive({
   user_id: null,
   username: '',
-  limit: null,
-  period: 'daily'
+  limit: null
 })
 
 // 数据列表
@@ -400,9 +381,6 @@ const limitRules = {
   ],
   limit: [
     { required: true, message: '请输入带宽限制', trigger: 'blur' }
-  ],
-  period: [
-    { required: true, message: '请选择限制周期', trigger: 'change' }
   ]
 }
 
@@ -449,7 +427,6 @@ const editLimit = (row) => {
   editForm.user_id = row.user_id
   editForm.username = row.username
   editForm.limit = row.limit
-  editForm.period = row.period
   showEditDialog.value = true
 }
 
@@ -463,8 +440,7 @@ const updateBandwidthLimit = async () => {
       authStore.token, 
       editForm.user_id, 
       {
-        limit: editForm.limit,
-        period: editForm.period
+        limit: editForm.limit
       }
     )
     ElMessage.success(result.message || '更新成功')
@@ -497,6 +473,36 @@ const deleteLimit = async (row) => {
     if (error !== 'cancel') {
       // 错误已在 API 服务中处理
     }
+  }
+}
+
+// 切换启用/禁用状态
+const toggleEnabled = async (row) => {
+  const oldValue = !row.enabled
+  row.switching = true
+  
+  try {
+    const response = await fetch(`/api/v1/traffic/limits/${row.user_id}/toggle`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ enabled: row.enabled })
+    })
+
+    if (response.ok) {
+      ElMessage.success(row.enabled ? '已启用限流' : '已禁用限流')
+    } else {
+      row.enabled = oldValue
+      const data = await response.json()
+      ElMessage.error(data.error || '操作失败')
+    }
+  } catch (error) {
+    row.enabled = oldValue
+    ElMessage.error('操作失败: ' + error.message)
+  } finally {
+    row.switching = false
   }
 }
 
@@ -770,7 +776,6 @@ const exportLimits = () => {
     '用户ID': limit.user_id,
     '用户名': limit.username,
     '带宽限制': limit.limit,
-    '周期': limit.period === 'daily' ? '日限制' : '月限制',
     '状态': limit.enabled ? '启用' : '禁用',
     '更新时间': limit.updated_at
   }))
@@ -811,7 +816,6 @@ const exportLogs = () => {
 const resetForm = () => {
   limitForm.user_id = null
   limitForm.limit = null
-  limitForm.period = 'daily'
 }
 
 // 表单引用

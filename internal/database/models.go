@@ -90,8 +90,7 @@ type BandwidthLimit struct {
 	ID        uint      `gorm:"primarykey" json:"id"`
 	UserID    uint      `json:"user_id"`
 	User      User      `json:"user"`
-	Limit     int64     `gorm:"not null" json:"limit"`         // 字节/秒
-	Period    string    `gorm:"default:'daily'" json:"period"` // daily, monthly
+	Limit     int64     `gorm:"not null" json:"limit"` // 字节/秒，0表示无限制
 	Enabled   bool      `gorm:"default:true" json:"enabled"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

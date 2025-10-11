@@ -12,6 +12,47 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// logOperation 记录操作日志
+func (s *Server) logOperation(c *gin.Context, operation string, target string, details string) {
+	// 从上下文中获取操作用户信息
+	operatorID, _ := c.Get("user_id")
+	operatorUsername, _ := c.Get("username")
+
+	if operatorID == nil || operatorUsername == nil {
+		logger.Log.Warn("无法获取操作用户信息，跳过日志记录")
+		return
+	}
+
+	// 创建操作日志
+	accessLog := &database.AccessLog{
+		UserID:    operatorID.(uint),
+		ClientIP:  c.ClientIP(),
+		TargetURL: c.Request.URL.Path,
+		Method:    c.Request.Method,
+		Status:    "success",
+		UserAgent: c.GetHeader("User-Agent"),
+		Timestamp: time.Now(),
+	}
+
+	// 将操作详情添加到UserAgent字段中
+	if details != "" {
+		userAgent := c.GetHeader("User-Agent")
+		if userAgent == "" {
+			userAgent = "API-Client"
+		}
+		accessLog.UserAgent = userAgent + " | " + details
+	}
+
+	// 保存日志到数据库
+	if database.DB != nil {
+		if err := database.DB.Create(accessLog).Error; err != nil {
+			logger.Log.Errorf("记录操作日志失败: %v", err)
+		} else {
+			logger.Log.Infof("操作日志已记录: %s %s %s (操作者: %s)", operation, target, details, operatorUsername)
+		}
+	}
+}
+
 func (s *Server) handleGetLogs(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
@@ -130,15 +171,29 @@ func (s *Server) handleExportLogs(c *gin.Context) {
 		}
 		writer.Write(row)
 	}
+
+	// 记录导出日志操作
+	s.logOperation(c, "EXPORT_LOGS", filename,
+		"exported_records:"+strconv.Itoa(len(logs)))
+
+	logger.Log.Infof("日志导出成功，共导出 %d 条记录", len(logs))
 }
 
 func (s *Server) handleClearLogs(c *gin.Context) {
+	// 先查询要删除的日志数量
+	var count int64
+	database.DB.Model(&database.AccessLog{}).Where("timestamp < ?", time.Now().AddDate(0, 0, -30)).Count(&count)
+
 	if err := database.DB.Where("timestamp < ?", time.Now().AddDate(0, 0, -30)).Delete(&database.AccessLog{}).Error; err != nil {
 		logger.Log.Errorf("清理日志失败: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "清理日志失败"})
 		return
 	}
 
-	logger.Log.Info("日志清理成功")
+	// 记录清理日志操作
+	s.logOperation(c, "CLEAR_LOGS", "30天前",
+		"deleted_records:"+strconv.FormatInt(count, 10))
+
+	logger.Log.Infof("日志清理成功，删除了 %d 条记录", count)
 	c.JSON(http.StatusOK, gin.H{"message": "日志清理成功"})
 }

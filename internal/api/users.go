@@ -3,26 +3,69 @@ package api
 import (
 	"net/http"
 	"strconv"
+	"time"
 
-	"github.com/gin-gonic/gin"
 	"socks5-app/internal/auth"
 	"socks5-app/internal/database"
 	"socks5-app/internal/logger"
+
+	"github.com/gin-gonic/gin"
 )
 
 type CreateUserRequest struct {
-	Username        string `json:"username" binding:"required"`
-	Password        string `json:"password" binding:"required"`
-	Email           string `json:"email"`
-	Role            string `json:"role"`
-	BandwidthLimit  int64  `json:"bandwidth_limit"`
+	Username       string `json:"username" binding:"required"`
+	Password       string `json:"password" binding:"required"`
+	Email          string `json:"email"`
+	Role           string `json:"role"`
+	BandwidthLimit int64  `json:"bandwidth_limit"`
 }
 
 type UpdateUserRequest struct {
-	Email           string `json:"email"`
-	Role            string `json:"role"`
-	Status          string `json:"status"`
-	BandwidthLimit  int64  `json:"bandwidth_limit"`
+	Email          string `json:"email"`
+	Role           string `json:"role"`
+	Status         string `json:"status"`
+	BandwidthLimit int64  `json:"bandwidth_limit"`
+}
+
+// logUserOperation 记录用户操作日志
+func (s *Server) logUserOperation(c *gin.Context, operation string, targetUser string, details string) {
+	// 从上下文中获取操作用户信息
+	operatorID, _ := c.Get("user_id")
+	operatorUsername, _ := c.Get("username")
+
+	if operatorID == nil || operatorUsername == nil {
+		logger.Log.Warn("无法获取操作用户信息，跳过日志记录")
+		return
+	}
+
+	// 创建操作日志
+	accessLog := &database.AccessLog{
+		UserID:    operatorID.(uint),
+		ClientIP:  c.ClientIP(),
+		TargetURL: c.Request.URL.Path,
+		Method:    c.Request.Method,
+		Status:    "success",
+		UserAgent: c.GetHeader("User-Agent"),
+		Timestamp: time.Now(),
+	}
+
+	// 将操作详情添加到UserAgent字段中（因为AccessLog模型没有专门的details字段）
+	if details != "" {
+		userAgent := c.GetHeader("User-Agent")
+		if userAgent == "" {
+			userAgent = "API-Client"
+		}
+		accessLog.UserAgent = userAgent + " | " + details
+	}
+
+	// 保存日志到数据库
+	if database.DB != nil {
+		if err := database.DB.Create(accessLog).Error; err != nil {
+			logger.Log.Errorf("记录用户操作日志失败: %v", err)
+		} else {
+			logger.Log.Infof("用户操作日志已记录: %s %s %s (操作者: %s)", operation, targetUser, details, operatorUsername)
+		}
+	}
 }
 
 func (s *Server) handleGetUsers(c *gin.Context) {
@@ -75,6 +118,11 @@ func (s *Server) handleCreateUser(c *gin.Context) {
 	}
 
 	logger.Log.Infof("创建用户成功: %s", user.Username)
+
+	// 记录用户操作日志
+	s.logUserOperation(c, "CREATE_USER", req.Username,
+		"role:"+req.Role+",email:"+req.Email+",bandwidth_limit:"+strconv.FormatInt(req.BandwidthLimit, 10))
+
 	c.JSON(http.StatusCreated, gin.H{"user": user})
 }
 
@@ -135,6 +183,23 @@ func (s *Server) handleUpdateUser(c *gin.Context) {
 	}
 
 	logger.Log.Infof("更新用户成功: %s", user.Username)
+
+	// 记录用户操作日志
+	details := "target_user_id:" + strconv.FormatUint(uint64(user.ID), 10)
+	if req.Email != "" {
+		details += ",email:" + req.Email
+	}
+	if req.Role != "" {
+		details += ",role:" + req.Role
+	}
+	if req.Status != "" {
+		details += ",status:" + req.Status
+	}
+	if req.BandwidthLimit > 0 {
+		details += ",bandwidth_limit:" + strconv.FormatInt(req.BandwidthLimit, 10)
+	}
+	s.logUserOperation(c, "UPDATE_USER", user.Username, details)
+
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
@@ -164,5 +229,11 @@ func (s *Server) handleDeleteUser(c *gin.Context) {
 	}
 
 	logger.Log.Infof("删除用户成功: %s", user.Username)
+
+	// 记录用户操作日志
+	details := "target_user_id:" + strconv.FormatUint(uint64(user.ID), 10) +
+		",deleted_user_role:" + user.Role + ",deleted_user_email:" + user.Email
+	s.logUserOperation(c, "DELETE_USER", user.Username, details)
+
 	c.JSON(http.StatusOK, gin.H{"message": "用户删除成功"})
 }
