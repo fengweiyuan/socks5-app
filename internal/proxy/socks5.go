@@ -41,28 +41,35 @@ type Socks5Server struct {
 	mu                sync.RWMutex
 	heartbeatService  *heartbeat.HeartbeatService
 	trafficController *traffic.TrafficController
+	httpInspector     *HTTPInspector
 }
 
 type Client struct {
-	conn      net.Conn
-	user      *database.User
-	session   *database.ProxySession
-	startTime time.Time
-	bytesSent int64
-	bytesRecv int64
-	clientIP  string // 客户端IP，用于透明代理
-	mu        sync.Mutex
+	conn              net.Conn
+	user              *database.User
+	session           *database.ProxySession
+	startTime         time.Time
+	bytesSent         int64
+	bytesRecv         int64
+	clientIP          string // 客户端IP，用于透明代理
+	targetAddr        string // 目标地址（用于HTTP检测）
+	inspectedFirstPkt bool   // 是否已检测第一个数据包
+	mu                sync.Mutex
 }
 
 func NewServer() *Socks5Server {
 	trafficController := traffic.NewTrafficController()
 	trafficController.Start()
 
+	// 创建HTTP检测器
+	httpInspector := NewHTTPInspector()
+
 	return &Socks5Server{
 		config:            &config.GlobalConfig.Proxy,
 		clients:           make(map[string]*Client),
 		heartbeatService:  heartbeat.NewHeartbeatService(),
 		trafficController: trafficController,
+		httpInspector:     httpInspector,
 	}
 }
 
@@ -75,6 +82,15 @@ func (s *Socks5Server) Start() error {
 
 	s.listener = listener
 	logger.Log.Infof("SOCKS5服务器启动成功，监听地址: %s", addr)
+
+	// 显示配置信息
+	logger.Log.Infof("配置项 - IP转发: %v, HTTP深度检测: %v",
+		s.config.EnableIPForwarding, s.config.EnableHTTPInspection)
+	if s.config.EnableHTTPInspection {
+		logger.Log.Info("✓ HTTP深度检测已启用 - 将检测HTTP Host头和TLS SNI")
+	} else {
+		logger.Log.Info("✗ HTTP深度检测已禁用 - 仅使用SOCKS5层URL过滤")
+	}
 
 	// 启动心跳服务
 	s.heartbeatService.Start()
@@ -320,6 +336,9 @@ func (s *Socks5Server) handleRequest(client *Client) error {
 }
 
 func (s *Socks5Server) handleConnect(client *Client, targetAddr string, port int) error {
+	// 保存目标地址用于HTTP检测
+	client.targetAddr = targetAddr
+
 	// 连接目标服务器
 	target := fmt.Sprintf("%s:%d", targetAddr, port)
 	targetConn, err := net.DialTimeout("tcp", target, time.Duration(s.config.Timeout)*time.Second)
@@ -380,6 +399,49 @@ func (s *Socks5Server) forwardData(client *Client, targetConn net.Conn, toTarget
 		}
 
 		if n > 0 {
+			// 处理数据转发
+			data := buffer[:n]
+
+			// HTTP深度检测功能（可通过配置开关控制）
+			// 如果启用了HTTP检测，且是从客户端到目标的第一个数据包，进行HTTP/HTTPS检测
+			if s.config.EnableHTTPInspection && toTarget && !client.inspectedFirstPkt {
+				client.mu.Lock()
+				if !client.inspectedFirstPkt {
+					client.inspectedFirstPkt = true
+					client.mu.Unlock()
+
+					// 尝试提取域名（HTTP Host头或TLS SNI）
+					var detectedHost string
+					var detectionMethod string
+
+					// 首先尝试提取HTTP Host头
+					if host, found := s.httpInspector.ExtractHost(data); found {
+						detectedHost = host
+						detectionMethod = "HTTP Host"
+					} else if sni, found := s.httpInspector.ExtractSNI(data); found {
+						// 如果不是HTTP，尝试提取TLS SNI
+						detectedHost = sni
+						detectionMethod = "TLS SNI"
+					}
+
+					// 如果检测到域名，进行URL过滤检查
+					if detectedHost != "" {
+						logger.Log.Infof("检测到%s: %s (原始目标: %s, 用户: %s)",
+							detectionMethod, detectedHost, client.targetAddr, client.user.Username)
+
+						// 使用检测到的域名进行过滤检查
+						if !s.checkURLFilter(client.user, detectedHost) {
+							logger.Log.Warnf("HTTP深度检测拦截: 用户 %s 访问 %s 被阻止 (原始地址: %s)",
+								client.user.Username, detectedHost, client.targetAddr)
+							// 关闭连接
+							return
+						}
+					}
+				} else {
+					client.mu.Unlock()
+				}
+			}
+
 			// 应用流量控制
 			if s.trafficController != nil {
 				ctx := context.Background()
@@ -391,10 +453,8 @@ func (s *Socks5Server) forwardData(client *Client, targetConn net.Conn, toTarget
 				s.trafficController.RecordTraffic(client.user.ID, int64(n))
 			}
 
-			// 处理数据转发
-			data := buffer[:n]
+			// 如果启用了IP转发，处理HTTP请求头
 			if toTarget && s.config.EnableIPForwarding && client.clientIP != "" {
-				// 如果是向目标服务器发送数据且启用了IP转发，处理HTTP请求
 				data = s.processHTTPRequest(data, client.clientIP)
 			}
 

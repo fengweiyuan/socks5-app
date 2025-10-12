@@ -19,6 +19,7 @@ proxy:
   max_connections: 1000
   heartbeat_interval: 5
   enable_ip_forwarding: true  # 启用IP透传功能
+  enable_http_inspection: true  # 启用HTTP深度检测（HTTP Host头和TLS SNI），默认开启
 
 auth:
   session_timeout: 3600
