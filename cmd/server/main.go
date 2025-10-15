@@ -6,9 +6,19 @@ import (
 	"socks5-app/internal/config"
 	"socks5-app/internal/database"
 	"socks5-app/internal/logger"
+	"time"
 )
 
 func main() {
+	// 设置全局时区为东8区（Asia/Shanghai）
+	location, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		log.Printf("警告: 加载时区失败，使用本地时区: %v", err)
+	} else {
+		time.Local = location
+		log.Printf("已设置全局时区为: Asia/Shanghai (UTC+8)")
+	}
+
 	// 初始化配置
 	if err := config.Init(); err != nil {
 		log.Fatalf("配置初始化失败: %v", err)

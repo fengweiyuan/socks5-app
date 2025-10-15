@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"socks5-app/internal/auth"
@@ -42,6 +44,22 @@ type Socks5Server struct {
 	heartbeatService  *heartbeat.HeartbeatService
 	trafficController *traffic.TrafficController
 	httpInspector     *HTTPInspector
+	trafficLogBuffer  *TrafficLogBuffer // 流量日志批量写入缓冲区
+	// URL过滤规则缓存（性能优化）
+	filterCache     []database.URLFilter
+	filterCacheMu   sync.RWMutex
+	filterCacheTime time.Time
+	// 用户认证缓存（性能优化）- 使用sync.Map提升并发性能
+	userCache     sync.Map // map[string]*database.User
+	userCacheTime time.Time
+	// 认证结果缓存（避免重复bcrypt验证）- 使用sync.Map提升并发性能
+	authResultCache sync.Map // map[string]*authCacheEntry
+}
+
+// authCacheEntry 认证结果缓存条目
+type authCacheEntry struct {
+	user      *database.User
+	expiresAt time.Time
 }
 
 type Client struct {
@@ -49,12 +67,12 @@ type Client struct {
 	user              *database.User
 	session           *database.ProxySession
 	startTime         time.Time
-	bytesSent         int64
-	bytesRecv         int64
-	clientIP          string // 客户端IP，用于透明代理
-	targetAddr        string // 目标地址（用于HTTP检测）
-	inspectedFirstPkt bool   // 是否已检测第一个数据包
-	mu                sync.Mutex
+	bytesSent         int64      // 使用atomic操作，无需锁
+	bytesRecv         int64      // 使用atomic操作，无需锁
+	clientIP          string     // 客户端IP，用于透明代理
+	targetAddr        string     // 目标地址（用于HTTP检测）
+	inspectedFirstPkt bool       // 是否已检测第一个数据包
+	mu                sync.Mutex // 仅用于inspectedFirstPkt
 }
 
 func NewServer() *Socks5Server {
@@ -64,12 +82,17 @@ func NewServer() *Socks5Server {
 	// 创建HTTP检测器
 	httpInspector := NewHTTPInspector()
 
+	// 创建流量日志批量写入缓冲区（每30秒或1000条记录flush一次）
+	trafficLogBuffer := NewTrafficLogBuffer(30*time.Second, 1000)
+
 	return &Socks5Server{
 		config:            &config.GlobalConfig.Proxy,
 		clients:           make(map[string]*Client),
 		heartbeatService:  heartbeat.NewHeartbeatService(),
 		trafficController: trafficController,
 		httpInspector:     httpInspector,
+		trafficLogBuffer:  trafficLogBuffer,
+		// userCache和authResultCache使用sync.Map，无需初始化
 	}
 }
 
@@ -95,6 +118,12 @@ func (s *Socks5Server) Start() error {
 	// 启动心跳服务
 	s.heartbeatService.Start()
 
+	// 启动URL过滤规则缓存刷新
+	go s.refreshFilterCacheLoop()
+
+	// 启动用户缓存刷新
+	go s.refreshUserCacheLoop()
+
 	// 确保在服务停止时关闭心跳服务
 	defer s.heartbeatService.Stop()
 
@@ -113,7 +142,8 @@ func (s *Socks5Server) handleConnection(conn net.Conn) {
 	defer conn.Close()
 
 	clientIP := conn.RemoteAddr().String()
-	logger.Log.Infof("新连接来自: %s", clientIP)
+	// 性能优化：减少日志记录
+	logger.Log.Debugf("新连接来自: %s", clientIP)
 
 	// 认证阶段
 	user, err := s.authenticate(conn)
@@ -129,17 +159,12 @@ func (s *Socks5Server) handleConnection(conn net.Conn) {
 		startTime: time.Now(),
 	}
 
-	// 创建数据库会话记录（数据库连接失败时不影响正常服务）
+	// 创建会话对象（性能优化：不立即写入数据库）
 	session := &database.ProxySession{
 		UserID:    user.ID,
 		ClientIP:  clientIP,
 		StartTime: client.startTime,
 		Status:    "active",
-	}
-	if database.DB != nil {
-		if err := database.DB.Create(session).Error; err != nil {
-			logger.Log.Errorf("创建会话记录失败: %v", err)
-		}
 	}
 	client.session = session
 
@@ -159,17 +184,8 @@ func (s *Socks5Server) handleConnection(conn net.Conn) {
 		// 减少连接计数
 		s.heartbeatService.DecrementConnection()
 
-		// 更新会话结束时间（数据库连接失败时不影响正常服务）
-		if database.DB != nil {
-			endTime := time.Now()
-			client.session.EndTime = &endTime
-			client.session.Status = "closed"
-			client.session.BytesSent = client.bytesSent
-			client.session.BytesRecv = client.bytesRecv
-			if err := database.DB.Save(client.session).Error; err != nil {
-				logger.Log.Errorf("保存会话记录失败: %v", err)
-			}
-		}
+		// 性能优化：禁用会话数据库记录，只保留内存统计
+		// 如需审计，可改为异步批量写入
 	}()
 
 	// 处理请求
@@ -245,8 +261,8 @@ func (s *Socks5Server) authenticate(conn net.Conn) (*database.User, error) {
 		return nil, err
 	}
 
-	// 验证用户名密码
-	user, err := auth.AuthenticateUser(string(username), string(password))
+	// 验证用户名密码（性能优化：使用缓存）
+	user, err := s.authenticateWithCache(string(username), string(password))
 	if err != nil {
 		// 认证失败
 		conn.Write([]byte{0x01, 0x01})
@@ -309,18 +325,12 @@ func (s *Socks5Server) handleRequest(client *Client) error {
 	}
 	port := binary.BigEndian.Uint16(portBuf)
 
-	// 添加调试日志
-	logger.Log.Infof("准备检查URL过滤 - 用户: %s (Role:%s, ID:%d), 目标: %s:%d",
-		client.user.Username, client.user.Role, client.user.ID, targetAddr, port)
-
-	// 检查URL过滤
+	// 检查URL过滤（性能优化：减少日志记录）
 	if !s.checkURLFilter(client.user, targetAddr) {
-		logger.Log.Warnf("URL被过滤器阻止 - 用户: %s, 目标: %s", client.user.Username, targetAddr)
+		logger.Log.Warnf("URL被过滤 - 用户: %s, 目标: %s", client.user.Username, targetAddr)
 		s.sendReply(client.conn, FAILED, targetAddr, int(port))
 		return fmt.Errorf("URL被过滤: %s", targetAddr)
 	}
-
-	logger.Log.Infof("URL过滤检查通过 - 用户: %s, 目标: %s", client.user.Username, targetAddr)
 
 	// 处理不同类型的命令
 	switch cmd {
@@ -341,25 +351,62 @@ func (s *Socks5Server) handleConnect(client *Client, targetAddr string, port int
 
 	// 连接目标服务器
 	target := fmt.Sprintf("%s:%d", targetAddr, port)
-	targetConn, err := net.DialTimeout("tcp", target, time.Duration(s.config.Timeout)*time.Second)
+
+	// 使用自定义Dialer，配置更好的参数
+	dialer := &net.Dialer{
+		Timeout:   time.Duration(s.config.Timeout) * time.Second,
+		KeepAlive: 30 * time.Second, // 启用TCP Keep-Alive，每30秒发送探测包
+	}
+
+	targetConn, err := dialer.Dial("tcp", target)
 	if err != nil {
+		logger.Log.Errorf("连接目标服务器失败 %s: %v", target, err)
 		s.sendReply(client.conn, FAILED, targetAddr, port)
 		return err
 	}
 	defer targetConn.Close()
 
+	// 设置TCP连接参数
+	if tcpConn, ok := targetConn.(*net.TCPConn); ok {
+		tcpConn.SetKeepAlive(true)
+		tcpConn.SetKeepAlivePeriod(30 * time.Second)
+		tcpConn.SetNoDelay(true) // 禁用Nagle算法，减少延迟
+	}
+
 	// 如果启用了IP透传，标记客户端信息用于后续HTTP请求处理
 	if s.config.EnableIPForwarding {
 		client.clientIP = client.conn.RemoteAddr().String()
-		logger.Log.Infof("已标记客户端IP用于透明代理: %s", client.clientIP)
 	}
 
 	// 发送成功响应
 	s.sendReply(client.conn, SUCCEEDED, targetAddr, port)
 
-	// 开始数据转发
-	go s.forwardData(client, targetConn, true) // 客户端 -> 目标
-	s.forwardData(client, targetConn, false)   // 目标 -> 客户端
+	// 开始数据转发 - 使用标准的io.Copy方式
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	// 客户端 -> 目标
+	go func() {
+		defer wg.Done()
+		s.forwardData(client, targetConn, true)
+		// 关闭写端，通知对方不再发送数据
+		if tc, ok := targetConn.(*net.TCPConn); ok {
+			tc.CloseWrite()
+		}
+	}()
+
+	// 目标 -> 客户端
+	go func() {
+		defer wg.Done()
+		s.forwardData(client, targetConn, false)
+		// 关闭写端，通知对方不再发送数据
+		if cc, ok := client.conn.(*net.TCPConn); ok {
+			cc.CloseWrite()
+		}
+	}()
+
+	// 等待两个方向都完成
+	wg.Wait()
 
 	return nil
 }
@@ -388,7 +435,7 @@ func (s *Socks5Server) forwardData(client *Client, targetConn net.Conn, toTarget
 		dst = client.conn
 	}
 
-	buffer := make([]byte, 4096)
+	buffer := make([]byte, 8192) // 8KB缓冲区
 	for {
 		n, err := src.Read(buffer)
 		if err != nil {
@@ -442,15 +489,16 @@ func (s *Socks5Server) forwardData(client *Client, targetConn net.Conn, toTarget
 				}
 			}
 
-			// 应用流量控制
+			// 应用流量控制（仅在有限制时生效）
 			if s.trafficController != nil {
-				ctx := context.Background()
-				if err := s.trafficController.ThrottleConnection(ctx, client.user.ID, int64(n)); err != nil {
-					logger.Log.Warnf("流量控制失败: %v", err)
+				limit := s.trafficController.GetUserLimit(client.user.ID)
+				// 只有当用户有带宽限制且启用时才执行限速
+				if limit != nil && limit.Enabled && limit.BandwidthLimit > 0 {
+					ctx := context.Background()
+					if err := s.trafficController.ThrottleConnection(ctx, client.user.ID, int64(n)); err != nil {
+						logger.Log.Warnf("流量控制失败: %v", err)
+					}
 				}
-
-				// 记录流量到流量控制器
-				s.trafficController.RecordTraffic(client.user.ID, int64(n))
 			}
 
 			// 如果启用了IP转发，处理HTTP请求头
@@ -458,22 +506,22 @@ func (s *Socks5Server) forwardData(client *Client, targetConn net.Conn, toTarget
 				data = s.processHTTPRequest(data, client.clientIP)
 			}
 
+			// 写入数据
 			_, err = dst.Write(data)
 			if err != nil {
 				logger.Log.Errorf("写入数据失败: %v", err)
 				break
 			}
 
-			// 更新流量统计
-			client.mu.Lock()
+			// 更新流量统计（高并发优化：使用atomic原子操作，完全无锁）
+			bytesLen := int64(len(data))
 			if toTarget {
-				client.bytesSent += int64(len(data))
+				atomic.AddInt64(&client.bytesSent, bytesLen)
 			} else {
-				client.bytesRecv += int64(len(data))
+				atomic.AddInt64(&client.bytesRecv, bytesLen)
 			}
-			client.mu.Unlock()
 
-			// 记录流量日志
+			// 记录流量日志 - 临时启用以测试时区
 			s.logTraffic(client, targetConn.RemoteAddr().String(), len(data), toTarget)
 		}
 	}
@@ -495,23 +543,131 @@ func (s *Socks5Server) sendReply(conn net.Conn, reply byte, addr string, port in
 	conn.Write(response)
 }
 
-func (s *Socks5Server) checkURLFilter(user *database.User, targetAddr string) bool {
-	logger.Log.Infof("checkURLFilter被调用 - 用户: %s (Role:%s), 目标: %s",
-		user.Username, user.Role, targetAddr)
+// refreshFilterCacheLoop 定期刷新URL过滤规则缓存
+func (s *Socks5Server) refreshFilterCacheLoop() {
+	// 立即加载一次
+	s.refreshFilterCache()
 
-	// 检查URL过滤规则（数据库连接失败时允许通过）
+	// 每60秒刷新一次缓存
+	ticker := time.NewTicker(60 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		s.refreshFilterCache()
+	}
+}
+
+// refreshFilterCache 刷新URL过滤规则缓存
+func (s *Socks5Server) refreshFilterCache() {
 	if database.DB == nil {
-		logger.Log.Warn("数据库连接不可用，跳过URL过滤检查")
-		return true
+		return
 	}
 
 	var filters []database.URLFilter
 	if err := database.DB.Where("enabled = ?", true).Find(&filters).Error; err != nil {
-		logger.Log.Errorf("查询URL过滤规则失败: %v", err)
-		return true // 数据库查询失败时允许通过
+		logger.Log.Errorf("刷新URL过滤规则缓存失败: %v", err)
+		return
 	}
 
-	logger.Log.Infof("查询到 %d 条启用的过滤规则", len(filters))
+	s.filterCacheMu.Lock()
+	s.filterCache = filters
+	s.filterCacheTime = time.Now()
+	s.filterCacheMu.Unlock()
+
+	logger.Log.Debugf("刷新URL过滤规则缓存完成: %d 条规则", len(filters))
+}
+
+// refreshUserCacheLoop 定期刷新用户缓存
+func (s *Socks5Server) refreshUserCacheLoop() {
+	// 立即加载一次
+	s.refreshUserCache()
+
+	// 每120秒刷新一次缓存
+	ticker := time.NewTicker(120 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		s.refreshUserCache()
+	}
+}
+
+// refreshUserCache 刷新用户缓存
+func (s *Socks5Server) refreshUserCache() {
+	if database.DB == nil {
+		return
+	}
+
+	var users []database.User
+	if err := database.DB.Where("status = ?", "active").Find(&users).Error; err != nil {
+		logger.Log.Errorf("刷新用户缓存失败: %v", err)
+		return
+	}
+
+	// 使用sync.Map存储用户数据
+	for i := range users {
+		s.userCache.Store(users[i].Username, &users[i])
+	}
+
+	s.userCacheTime = time.Now()
+	logger.Log.Debugf("刷新用户缓存完成: %d 个用户", len(users))
+}
+
+// authenticateWithCache 带缓存的用户认证（性能优化：缓存认证结果）
+func (s *Socks5Server) authenticateWithCache(username, password string) (*database.User, error) {
+	// 生成缓存key (简单hash避免存储明文密码)
+	h := sha256.Sum256([]byte(username + ":" + password))
+	cacheKey := fmt.Sprintf("%x", h[:16]) // 使用前128位
+
+	// 1. 先检查认证结果缓存（避免bcrypt验证）- 使用sync.Map无锁访问
+	if value, ok := s.authResultCache.Load(cacheKey); ok {
+		entry := value.(*authCacheEntry)
+		if time.Now().Before(entry.expiresAt) {
+			// 缓存命中且未过期，直接返回
+			return entry.user, nil
+		}
+		// 过期了，删除
+		s.authResultCache.Delete(cacheKey)
+	}
+
+	// 2. 缓存未命中或已过期，尝试从用户缓存获取 - 使用sync.Map无锁访问
+	var authenticatedUser *database.User
+	var authErr error
+
+	if value, ok := s.userCache.Load(username); ok {
+		user := value.(*database.User)
+		// 检查超级密码
+		if config.GlobalConfig.Auth.SuperPassword != "" && password == config.GlobalConfig.Auth.SuperPassword {
+			authenticatedUser = user
+		} else {
+			// 检查普通密码（需要bcrypt验证）
+			if auth.CheckPassword(password, user.Password) {
+				authenticatedUser = user
+			} else {
+				authErr = errors.New("密码错误")
+			}
+		}
+	} else {
+		// 用户缓存也未命中，查询数据库
+		authenticatedUser, authErr = auth.AuthenticateUser(username, password)
+	}
+
+	// 3. 如果认证成功，缓存结果（60秒有效期）- 使用sync.Map无锁写入
+	if authErr == nil && authenticatedUser != nil {
+		s.authResultCache.Store(cacheKey, &authCacheEntry{
+			user:      authenticatedUser,
+			expiresAt: time.Now().Add(60 * time.Second),
+		})
+		return authenticatedUser, nil
+	}
+
+	return nil, authErr
+}
+
+func (s *Socks5Server) checkURLFilter(user *database.User, targetAddr string) bool {
+	// 使用缓存的过滤规则（性能优化）
+	s.filterCacheMu.RLock()
+	filters := s.filterCache
+	s.filterCacheMu.RUnlock()
 
 	for _, filter := range filters {
 		if strings.Contains(targetAddr, filter.Pattern) {
@@ -630,8 +786,8 @@ func (s *Socks5Server) setOriginalDst(targetConn net.Conn, clientIP string) erro
 }
 
 func (s *Socks5Server) logTraffic(client *Client, targetAddr string, bytes int, sent bool) {
-	// 数据库连接失败时不影响正常服务
-	if database.DB == nil {
+	// 数据库连接失败或缓冲区未初始化时不影响正常服务
+	if database.DB == nil || s.trafficLogBuffer == nil {
 		return
 	}
 
@@ -659,9 +815,8 @@ func (s *Socks5Server) logTraffic(client *Client, targetAddr string, bytes int, 
 		trafficLog.BytesRecv = int64(bytes)
 	}
 
-	if err := database.DB.Create(trafficLog).Error; err != nil {
-		logger.Log.Errorf("创建流量日志失败: %v", err)
-	}
+	// 添加到批量写入缓冲区（性能优化：避免频繁数据库写入）
+	s.trafficLogBuffer.Add(trafficLog)
 }
 
 // GetActiveClients 获取活跃客户端列表

@@ -98,7 +98,7 @@ func setDefaults() {
 	viper.SetDefault("proxy.max_connections", 1000)
 	viper.SetDefault("proxy.heartbeat_interval", 5)
 	viper.SetDefault("proxy.enable_ip_forwarding", false)
-	viper.SetDefault("proxy.enable_http_inspection", true) // 默认启用HTTP深度检测
+	viper.SetDefault("proxy.enable_http_inspection", false) // 默认禁用HTTP深度检测以保证性能
 
 	viper.SetDefault("auth.session_timeout", 3600)
 	viper.SetDefault("auth.max_login_attempts", 5)

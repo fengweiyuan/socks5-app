@@ -33,6 +33,11 @@ type UserLimit struct {
 	BandwidthLimit int64     `json:"bandwidth_limit"` // 字节/秒，0表示无限制
 	Enabled        bool      `json:"enabled"`
 	LastUpdate     time.Time `json:"last_update"`
+
+	// 令牌桶相关字段
+	tokens     float64   // 当前令牌数
+	lastRefill time.Time // 上次填充令牌的时间
+	mu         sync.Mutex
 }
 
 // UserStats 用户流量统计
@@ -67,6 +72,9 @@ func (tc *TrafficController) Start() {
 
 	// 启动统计清理协程
 	go tc.cleanupLoop()
+
+	// 启动带宽限制重新加载协程
+	go tc.reloadLimitsLoop()
 }
 
 // Stop 停止流量控制器
@@ -91,29 +99,65 @@ func (tc *TrafficController) loadUserLimits() {
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
 
+	updatedCount := 0
+	newCount := 0
+
 	for _, user := range users {
+		// 确定要使用的带宽限制值
+		var limitValue int64
+		var enabled bool
+
 		// 检查是否有专门的带宽限制记录
 		var bandwidthLimit database.BandwidthLimit
 		if err := database.DB.Where("user_id = ? AND enabled = ?", user.ID, true).First(&bandwidthLimit).Error; err == nil {
 			// 使用专门的带宽限制记录
-			tc.userLimits[user.ID] = &UserLimit{
-				UserID:         user.ID,
-				BandwidthLimit: bandwidthLimit.Limit,
-				Enabled:        bandwidthLimit.Enabled,
-				LastUpdate:     time.Now(),
-			}
+			limitValue = bandwidthLimit.Limit
+			enabled = bandwidthLimit.Enabled
 		} else {
 			// 使用用户表中的带宽限制字段
+			limitValue = user.BandwidthLimit
+			enabled = user.BandwidthLimit > 0
+		}
+
+		// 检查是否已存在限制配置
+		existingLimit, exists := tc.userLimits[user.ID]
+
+		if exists {
+			// 检查限制值是否变化
+			if existingLimit.BandwidthLimit != limitValue || existingLimit.Enabled != enabled {
+				// 限制值变化了，需要更新并重置令牌桶
+				existingLimit.mu.Lock()
+				existingLimit.BandwidthLimit = limitValue
+				existingLimit.Enabled = enabled
+				existingLimit.LastUpdate = time.Now()
+				// 重置令牌桶状态
+				existingLimit.tokens = float64(limitValue * 2)
+				existingLimit.lastRefill = time.Now()
+				existingLimit.mu.Unlock()
+
+				logger.Log.Infof("更新用户 %d (%s) 的带宽限制: %d B/s (enabled: %v)",
+					user.ID, user.Username, limitValue, enabled)
+				updatedCount++
+			}
+			// 如果没有变化，保持现有配置（包括令牌桶状态）
+		} else {
+			// 新用户，创建限制配置
 			tc.userLimits[user.ID] = &UserLimit{
 				UserID:         user.ID,
-				BandwidthLimit: user.BandwidthLimit,
-				Enabled:        user.BandwidthLimit > 0,
+				BandwidthLimit: limitValue,
+				Enabled:        enabled,
 				LastUpdate:     time.Now(),
 			}
+			logger.Log.Infof("新增用户 %d (%s) 的带宽限制: %d B/s (enabled: %v)",
+				user.ID, user.Username, limitValue, enabled)
+			newCount++
 		}
 	}
 
-	logger.Log.Infof("加载了 %d 个用户的带宽限制", len(tc.userLimits))
+	if updatedCount > 0 || newCount > 0 {
+		logger.Log.Infof("带宽限制加载完成: 总用户数 %d, 新增 %d, 更新 %d",
+			len(tc.userLimits), newCount, updatedCount)
+	}
 }
 
 // GetUserLimit 获取用户带宽限制
@@ -286,6 +330,22 @@ func (tc *TrafficController) cleanupLoop() {
 	}
 }
 
+// reloadLimitsLoop 定期重新加载带宽限制配置
+func (tc *TrafficController) reloadLimitsLoop() {
+	ticker := time.NewTicker(120 * time.Second) // 每120秒重新加载一次（优化：从30秒改为120秒）
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			logger.Log.Debug("重新加载带宽限制配置...")
+			tc.loadUserLimits()
+		case <-tc.stopChan:
+			return
+		}
+	}
+}
+
 // cleanupOldStats 清理旧的统计数据
 func (tc *TrafficController) cleanupOldStats() {
 	tc.statsMu.Lock()
@@ -304,27 +364,70 @@ func (tc *TrafficController) cleanupOldStats() {
 	}
 }
 
-// ThrottleConnection 限速连接
+// ThrottleConnection 限速连接 - 使用令牌桶算法（优化版）
 func (tc *TrafficController) ThrottleConnection(ctx context.Context, userID uint, bytes int64) error {
-	// 检查带宽限制
-	shouldThrottle, limit := tc.CheckBandwidthLimit(userID)
-	if !shouldThrottle {
-		return nil // 不需要限速
+	// 获取用户的带宽限制
+	tc.mu.RLock()
+	limit, exists := tc.userLimits[userID]
+	tc.mu.RUnlock()
+
+	// 如果没有限制或限制未启用，不进行限速
+	if !exists || !limit.Enabled || limit.BandwidthLimit <= 0 {
+		return nil
 	}
 
-	// 计算需要等待的时间
-	// 假设我们要将速度限制在 limit 字节/秒
-	waitTime := time.Duration(float64(bytes) / float64(limit) * float64(time.Second))
+	// 优化：减少锁持有时间，将计算移到锁外
+	now := time.Now()
+	requiredTokens := float64(bytes)
 
-	if waitTime > 100*time.Millisecond {
-		// 如果等待时间超过100ms，则进行限速
-		select {
-		case <-time.After(waitTime):
-			return nil
-		case <-ctx.Done():
-			return ctx.Err()
+	limit.mu.Lock()
+
+	// 初始化令牌桶
+	if limit.lastRefill.IsZero() {
+		limit.lastRefill = now
+		limit.tokens = float64(limit.BandwidthLimit * 2)
+	}
+
+	// 计算自上次填充以来应该新增的令牌数
+	elapsed := now.Sub(limit.lastRefill).Seconds()
+	if elapsed > 0 {
+		newTokens := elapsed * float64(limit.BandwidthLimit)
+		limit.tokens += newTokens
+		maxTokens := float64(limit.BandwidthLimit * 2)
+		if limit.tokens > maxTokens {
+			limit.tokens = maxTokens
 		}
+		limit.lastRefill = now
 	}
 
-	return nil
+	// 如果令牌足够，直接扣除并返回
+	if limit.tokens >= requiredTokens {
+		limit.tokens -= requiredTokens
+		limit.mu.Unlock()
+		return nil
+	}
+
+	// 令牌不足，计算等待时间（在锁内完成快速计算）
+	tokensNeeded := requiredTokens - limit.tokens
+	waitSeconds := tokensNeeded / float64(limit.BandwidthLimit)
+	waitTime := time.Duration(waitSeconds * float64(time.Second))
+
+	// 限制最大等待时间
+	maxWaitTime := 5 * time.Second // 优化：从10秒改为5秒，避免长时间阻塞
+	if waitTime > maxWaitTime {
+		waitTime = maxWaitTime
+	}
+
+	// 预支令牌
+	limit.tokens = 0
+	limit.lastRefill = now
+	limit.mu.Unlock() // 优化：在等待之前释放锁
+
+	// 在锁外等待，不阻塞其他goroutine
+	select {
+	case <-time.After(waitTime):
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }

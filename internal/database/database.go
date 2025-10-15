@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"socks5-app/internal/config"
 	"socks5-app/internal/logger"
+	"time"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/sqlite"
@@ -19,7 +20,8 @@ func Init() error {
 	// 根据配置选择数据库驱动
 	switch config.GlobalConfig.Database.Driver {
 	case "mysql":
-		dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		// 使用东8区（Asia/Shanghai）时区进行时间处理
+		dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Asia%%2FShanghai",
 			config.GlobalConfig.Database.Username,
 			config.GlobalConfig.Database.Password,
 			config.GlobalConfig.Database.Host,
@@ -43,6 +45,22 @@ func Init() error {
 		logger.Log.Errorf("数据库连接失败: %v", err)
 		DB = nil // 确保DB为nil
 		return err
+	}
+
+	// 配置连接池（性能优化）
+	sqlDB, err := DB.DB()
+	if err != nil {
+		logger.Log.Errorf("获取数据库连接池失败: %v", err)
+	} else {
+		// 设置最大打开连接数
+		sqlDB.SetMaxOpenConns(100)
+		// 设置最大空闲连接数
+		sqlDB.SetMaxIdleConns(20)
+		// 设置连接最大存活时间
+		sqlDB.SetConnMaxLifetime(time.Hour)
+		// 设置连接最大空闲时间
+		sqlDB.SetConnMaxIdleTime(10 * time.Minute)
+		logger.Log.Info("数据库连接池配置完成: MaxOpenConns=100, MaxIdleConns=20")
 	}
 
 	logger.Log.Info("数据库连接成功")

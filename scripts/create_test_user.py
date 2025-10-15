@@ -1,61 +1,59 @@
 #!/usr/bin/env python3
 """
-创建测试用户脚本
+创建测试用户
 """
-
 import bcrypt
 import pymysql
 
-def create_test_user():
-    """创建测试用户"""
-    # 连接数据库
-    connection = pymysql.connect(
-        host='127.0.0.1',
-        port=3306,
-        user='socks5_user',
-        password='socks5_password',
-        database='socks5_db',
-        charset='utf8mb4'
-    )
-    
-    try:
-        with connection.cursor() as cursor:
-            # 创建测试用户
-            username = 'testuser'
-            password = 'testpass'
-            
-            # 使用 bcrypt 加密密码
-            hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-            
-            # 插入或更新用户
-            sql = """
-            INSERT INTO users (username, password, email, role, status, created_at, updated_at) 
-            VALUES (%s, %s, %s, %s, %s, NOW(), NOW())
-            ON DUPLICATE KEY UPDATE 
-            password = VALUES(password),
-            status = VALUES(status),
-            updated_at = NOW()
-            """
-            
-            cursor.execute(sql, (username, hashed_password, 'test@example.com', 'user', 'active'))
-            connection.commit()
-            
-            print(f"✅ 测试用户创建成功:")
-            print(f"   用户名: {username}")
-            print(f"   密码: {password}")
-            print(f"   加密密码: {hashed_password}")
-            
-            # 验证用户
-            cursor.execute("SELECT id, username, status FROM users WHERE username = %s", (username,))
-            user = cursor.fetchone()
-            if user:
-                print(f"   用户ID: {user[0]}")
-                print(f"   状态: {user[2]}")
-            
-    except Exception as e:
-        print(f"❌ 创建用户失败: {str(e)}")
-    finally:
-        connection.close()
+# 数据库配置
+DB_CONFIG = {
+    'host': '127.0.0.1',
+    'port': 3306,
+    'user': 'socks5_user',
+    'password': 'socks5_password',
+    'database': 'socks5_db'
+}
 
-if __name__ == '__main__':
-    create_test_user()
+def hash_password(password):
+    """密码加密"""
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
+
+def create_user(username, password):
+    """创建用户"""
+    try:
+        conn = pymysql.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        
+        # 检查用户是否存在
+        cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
+        if cursor.fetchone():
+            print(f"用户 {username} 已存在，删除后重建...")
+            cursor.execute("DELETE FROM users WHERE username = %s", (username,))
+        
+        # 创建新用户
+        hashed_pwd = hash_password(password)
+        sql = """
+        INSERT INTO users (username, password, role, status, bandwidth_limit, created_at, updated_at)
+        VALUES (%s, %s, 'user', 'active', 0, NOW(), NOW())
+        """
+        cursor.execute(sql, (username, hashed_pwd))
+        conn.commit()
+        
+        print(f"✓ 用户 {username} 创建成功")
+        print(f"  - 用户名: {username}")
+        print(f"  - 密码: {password}")
+        print(f"  - 角色: user")
+        print(f"  - 状态: active")
+        print(f"  - 带宽限制: 0 (无限制)")
+        
+        cursor.close()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"✗ 创建用户失败: {e}")
+        return False
+
+if __name__ == "__main__":
+    create_user("fwy1014", "fwy1014")
