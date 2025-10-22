@@ -85,6 +85,16 @@ type IPWhitelist struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
+// IPBlacklist IP黑名单模型（支持CIDR格式）
+type IPBlacklist struct {
+	ID          uint      `gorm:"primarykey" json:"id"`
+	CIDR        string    `gorm:"not null;column:cidr" json:"cidr"` // 支持单IP或CIDR格式，如: 192.168.1.1 或 192.168.10.0/24
+	Description string    `json:"description"`
+	Enabled     bool      `gorm:"default:true" json:"enabled"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 // BandwidthLimit 带宽限制模型
 type BandwidthLimit struct {
 	ID        uint      `gorm:"primarykey" json:"id"`

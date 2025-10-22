@@ -38,6 +38,11 @@
           <template #title>URL过滤</template>
         </el-menu-item>
         
+        <el-menu-item index="/ip-control">
+          <el-icon><Lock /></el-icon>
+          <template #title>IP访问控制</template>
+        </el-menu-item>
+        
         <el-menu-item index="/proxy-health">
           <el-icon><Monitor /></el-icon>
           <template #title>代理健康状态</template>
@@ -89,6 +94,7 @@ import {
   TrendCharts,
   Document,
   Filter,
+  Lock,
   Expand,
   Fold,
   UserFilled,

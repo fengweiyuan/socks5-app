@@ -1,0 +1,85 @@
+{
+  "test_date": "2025-10-22T16:12:08.232297",
+  "total": 11,
+  "passed": 8,
+  "failed": 3,
+  "results": [
+    {
+      "scenario": "场景1",
+      "test_name": "访问8.8.8.8:53",
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "scenario": "场景2",
+      "test_name": "访问黑名单内IP 8.8.8.8",
+      "expected": false,
+      "actual": true,
+      "passed": false
+    },
+    {
+      "scenario": "场景2",
+      "test_name": "访问非黑名单IP 1.1.1.1",
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "scenario": "场景3",
+      "test_name": "访问被赦免的IP 8.8.8.8",
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "scenario": "场景3",
+      "test_name": "访问同网段未赦免IP 8.8.4.4",
+      "expected": false,
+      "actual": true,
+      "passed": false
+    },
+    {
+      "scenario": "场景4",
+      "test_name": "访问黑名单单个IP 1.1.1.1",
+      "expected": false,
+      "actual": false,
+      "passed": true
+    },
+    {
+      "scenario": "场景4",
+      "test_name": "访问非黑名单IP 1.0.0.1",
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "scenario": "场景5",
+      "test_name": "访问白名单内IP 8.8.8.8",
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "scenario": "场景5",
+      "test_name": "访问白名单外IP 1.1.1.1",
+      "expected": true,
+      "actual": false,
+      "passed": false
+    },
+    {
+      "scenario": "场景6",
+      "test_name": "访问白名单内IP 8.8.8.8",
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "scenario": "场景6",
+      "test_name": "访问白名单外IP 1.1.1.1",
+      "expected": false,
+      "actual": false,
+      "passed": true
+    }
+  ]
+}

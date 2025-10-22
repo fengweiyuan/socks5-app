@@ -145,12 +145,22 @@ func (s *Server) setupRoutes() {
 				filters.DELETE("/:id", middleware.AdminMiddleware(), s.handleDeleteURLFilter)
 			}
 
-			// IP白名单
-			whitelist := authenticated.Group("/whitelist")
+			// IP黑名单
+			ipBlacklist := authenticated.Group("/ip-blacklist")
 			{
-				whitelist.GET("", s.handleGetIPWhitelist)
-				whitelist.POST("", middleware.AdminMiddleware(), s.handleAddIPWhitelist)
-				whitelist.DELETE("/:id", middleware.AdminMiddleware(), s.handleRemoveIPWhitelist)
+				ipBlacklist.GET("", s.handleGetIPBlacklist)
+				ipBlacklist.POST("", middleware.AdminMiddleware(), s.handleCreateIPBlacklist)
+				ipBlacklist.PUT("/:id", middleware.AdminMiddleware(), s.handleUpdateIPBlacklist)
+				ipBlacklist.DELETE("/:id", middleware.AdminMiddleware(), s.handleDeleteIPBlacklist)
+			}
+
+			// IP白名单
+			ipWhitelist := authenticated.Group("/ip-whitelist")
+			{
+				ipWhitelist.GET("", s.handleGetIPWhitelist)
+				ipWhitelist.POST("", middleware.AdminMiddleware(), s.handleCreateIPWhitelist)
+				ipWhitelist.PUT("/:id", middleware.AdminMiddleware(), s.handleUpdateIPWhitelist)
+				ipWhitelist.DELETE("/:id", middleware.AdminMiddleware(), s.handleDeleteIPWhitelist)
 			}
 
 			// 系统状态

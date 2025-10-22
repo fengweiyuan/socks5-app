@@ -45,6 +45,11 @@ const router = createRouter({
           component: () => import('@/views/Filters.vue')
         },
         {
+          path: 'ip-control',
+          name: 'IPControl',
+          component: () => import('@/views/IPControl.vue')
+        },
+        {
           path: 'proxy-health',
           name: 'ProxyHealth',
           component: () => import('@/views/ProxyHealth.vue')

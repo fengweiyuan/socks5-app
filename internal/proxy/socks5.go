@@ -54,6 +54,13 @@ type Socks5Server struct {
 	userCacheTime time.Time
 	// 认证结果缓存（避免重复bcrypt验证）- 使用sync.Map提升并发性能
 	authResultCache sync.Map // map[string]*authCacheEntry
+	// IP黑名单和白名单缓存（性能优化）
+	ipBlacklistCache     []database.IPBlacklist
+	ipBlacklistCacheMu   sync.RWMutex
+	ipBlacklistCacheTime time.Time
+	ipWhitelistCache     []database.IPWhitelist
+	ipWhitelistCacheMu   sync.RWMutex
+	ipWhitelistCacheTime time.Time
 }
 
 // authCacheEntry 认证结果缓存条目
@@ -123,6 +130,10 @@ func (s *Socks5Server) Start() error {
 
 	// 启动用户缓存刷新
 	go s.refreshUserCacheLoop()
+
+	// 启动IP黑名单和白名单缓存刷新
+	go s.refreshIPBlacklistCacheLoop()
+	go s.refreshIPWhitelistCacheLoop()
 
 	// 确保在服务停止时关闭心跳服务
 	defer s.heartbeatService.Stop()
@@ -330,6 +341,13 @@ func (s *Socks5Server) handleRequest(client *Client) error {
 		logger.Log.Warnf("URL被过滤 - 用户: %s, 目标: %s", client.user.Username, targetAddr)
 		s.sendReply(client.conn, FAILED, targetAddr, int(port))
 		return fmt.Errorf("URL被过滤: %s", targetAddr)
+	}
+
+	// 检查IP黑名单和白名单
+	if blocked, reason := s.checkIPFilter(targetAddr); blocked {
+		logger.Log.Warnf("IP被过滤 - 用户: %s, 目标: %s, 原因: %s", client.user.Username, targetAddr, reason)
+		s.sendReply(client.conn, FAILED, targetAddr, int(port))
+		return fmt.Errorf("IP被过滤: %s, 原因: %s", targetAddr, reason)
 	}
 
 	// 处理不同类型的命令
@@ -834,4 +852,186 @@ func (s *Socks5Server) GetActiveClients() []*Client {
 // GetTrafficController 获取流量控制器
 func (s *Socks5Server) GetTrafficController() *traffic.TrafficController {
 	return s.trafficController
+}
+
+// refreshIPBlacklistCacheLoop 定期刷新IP黑名单缓存
+func (s *Socks5Server) refreshIPBlacklistCacheLoop() {
+	// 立即加载一次
+	s.refreshIPBlacklistCache()
+
+	// 每60秒刷新一次缓存
+	ticker := time.NewTicker(60 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		s.refreshIPBlacklistCache()
+	}
+}
+
+// refreshIPBlacklistCache 刷新IP黑名单缓存
+func (s *Socks5Server) refreshIPBlacklistCache() {
+	if database.DB == nil {
+		return
+	}
+
+	var blacklist []database.IPBlacklist
+	if err := database.DB.Where("enabled = ?", true).Find(&blacklist).Error; err != nil {
+		logger.Log.Errorf("刷新IP黑名单缓存失败: %v", err)
+		return
+	}
+
+	s.ipBlacklistCacheMu.Lock()
+	s.ipBlacklistCache = blacklist
+	s.ipBlacklistCacheTime = time.Now()
+	s.ipBlacklistCacheMu.Unlock()
+
+	logger.Log.Debugf("刷新IP黑名单缓存完成: %d 条规则", len(blacklist))
+}
+
+// refreshIPWhitelistCacheLoop 定期刷新IP白名单缓存
+func (s *Socks5Server) refreshIPWhitelistCacheLoop() {
+	// 立即加载一次
+	s.refreshIPWhitelistCache()
+
+	// 每60秒刷新一次缓存
+	ticker := time.NewTicker(60 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		s.refreshIPWhitelistCache()
+	}
+}
+
+// refreshIPWhitelistCache 刷新IP白名单缓存
+func (s *Socks5Server) refreshIPWhitelistCache() {
+	if database.DB == nil {
+		return
+	}
+
+	var whitelist []database.IPWhitelist
+	if err := database.DB.Where("enabled = ?", true).Find(&whitelist).Error; err != nil {
+		logger.Log.Errorf("刷新IP白名单缓存失败: %v", err)
+		return
+	}
+
+	s.ipWhitelistCacheMu.Lock()
+	s.ipWhitelistCache = whitelist
+	s.ipWhitelistCacheTime = time.Now()
+	s.ipWhitelistCacheMu.Unlock()
+
+	logger.Log.Debugf("刷新IP白名单缓存完成: %d 条规则", len(whitelist))
+}
+
+// checkIPFilter 检查IP是否被过滤
+// 返回: (是否被阻止, 阻止原因)
+// 过滤逻辑：
+// 1. 检查黑名单，如果匹配黑名单：
+//   - 如果在白名单中 → 白名单赦免，允许通过
+//   - 如果不在白名单中 → 拒绝
+//
+// 2. 如果不在黑名单中 → 直接通过
+//
+// 注意：白名单只用于赦免黑名单，不用于限制访问范围
+func (s *Socks5Server) checkIPFilter(targetAddr string) (bool, string) {
+	// 获取黑名单缓存
+	s.ipBlacklistCacheMu.RLock()
+	blacklist := s.ipBlacklistCache
+	s.ipBlacklistCacheMu.RUnlock()
+
+	// 获取白名单缓存
+	s.ipWhitelistCacheMu.RLock()
+	whitelist := s.ipWhitelistCache
+	s.ipWhitelistCacheMu.RUnlock()
+
+	// 标准化目标地址（移除端口号）
+	normalizedTarget := targetAddr
+	if strings.Contains(targetAddr, ":") {
+		host, _, err := net.SplitHostPort(targetAddr)
+		if err == nil {
+			normalizedTarget = host
+		}
+	}
+
+	// 第一步：检查是否在黑名单中
+	inBlacklist := false
+	var blacklistRule string
+	for _, entry := range blacklist {
+		matched, err := s.isIPInCIDR(targetAddr, entry.CIDR)
+		if err != nil {
+			logger.Log.Debugf("IP匹配检查失败: %v", err)
+			continue
+		}
+
+		if matched {
+			inBlacklist = true
+			blacklistRule = fmt.Sprintf("%s (%s)", entry.CIDR, entry.Description)
+			break
+		}
+	}
+
+	// 第二步：如果在黑名单中，检查白名单是否可以"赦免"
+	if inBlacklist {
+		if len(whitelist) > 0 {
+			// 有白名单，检查是否在白名单中
+			inWhitelist := false
+			for _, entry := range whitelist {
+				if entry.IP == normalizedTarget || strings.Contains(normalizedTarget, entry.IP) {
+					inWhitelist = true
+					logger.Log.Infof("IP白名单赦免黑名单规则 - IP: %s, 黑名单规则: %s, 白名单: %s (%s)",
+						normalizedTarget, blacklistRule, entry.IP, entry.Description)
+					break
+				}
+			}
+
+			if inWhitelist {
+				// 白名单赦免，允许通过
+				return false, ""
+			} else {
+				// 不在白名单中，维持黑名单的拒绝
+				return true, fmt.Sprintf("匹配IP黑名单规则: %s，且不在白名单中", blacklistRule)
+			}
+		} else {
+			// 没有白名单，黑名单直接生效
+			return true, fmt.Sprintf("匹配IP黑名单规则: %s", blacklistRule)
+		}
+	}
+
+	// 第三步：不在黑名单中，直接通过（白名单只用于赦免黑名单，不用于限制访问）
+	return false, ""
+}
+
+// isIPInCIDR 检查IP是否在CIDR网段中（内部辅助函数）
+func (s *Socks5Server) isIPInCIDR(ip, cidr string) (bool, error) {
+	// 移除可能的端口号
+	if strings.Contains(ip, ":") {
+		host, _, err := net.SplitHostPort(ip)
+		if err == nil {
+			ip = host
+		}
+	}
+
+	// 解析IP地址
+	parsedIP := net.ParseIP(ip)
+	if parsedIP == nil {
+		return false, fmt.Errorf("无效的IP地址: %s", ip)
+	}
+
+	// 如果CIDR不包含斜杠，说明是单个IP地址
+	if !strings.Contains(cidr, "/") {
+		// 单个IP比较
+		cidrIP := net.ParseIP(cidr)
+		if cidrIP == nil {
+			return false, fmt.Errorf("无效的IP地址: %s", cidr)
+		}
+		return parsedIP.Equal(cidrIP), nil
+	}
+
+	// 解析CIDR
+	_, ipNet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return false, fmt.Errorf("无效的CIDR格式: %s, 错误: %v", cidr, err)
+	}
+
+	// 检查IP是否在网段内
+	return ipNet.Contains(parsedIP), nil
 }

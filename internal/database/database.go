@@ -89,6 +89,7 @@ func autoMigrate() error {
 		&AccessLog{},
 		&URLFilter{},
 		&IPWhitelist{},
+		&IPBlacklist{},
 		&BandwidthLimit{},
 		&ProxyHeartbeat{},
 	)
